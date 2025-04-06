@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login / Register</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        .form-section { display: none; margin-top: 20px; }
+        label { display: block; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Welcome to the CRM</h1>
+
+    {% for message in app.flashes('error') %}
+        <div style="color: red">{{ message }}</div>
+    {% endfor %}
+    {% for message in app.flashes('success') %}
+        <div style="color: green">{{ message }}</div>
+    {% endfor %}
+
+    <button id="show-login">Login</button>
+    <button id="show-register">Register</button>
+
+    <div id="login-form" class="form-section">
+        <h2>Login</h2> <!-- Title for the login form -->
+        <form action="{{ path('app_login') }}" method="post">
+            <label>Username:
+                <input type="text" name="_username" required>
+            </label>
+            <label>Password:
+                <input type="password" name="_password" required>
+            </label>
+            <button type="submit">Login</button>
+        </form>
+    </div>
+
+<div id="register-form" class="form-section">
+    <h2>Register</h2>
+    {{ form_start(registrationForm, { action: path('app_register') }) }}
+        {{ form_row(registrationForm.username) }}
+        {{ form_row(registrationForm.password) }}
+        {{ form_row(registrationForm.currency) }}
+        <button type="submit">Register</button>
+    {{ form_end(registrationForm) }}
+</div>
+
+    <script>
+        // Сначала покажем login
+        $('#login-form').show();
+
+        $('#show-login').click(function () {
+            $('.form-section').hide();
+            $('#login-form').show();
+        });
+
+        $('#show-register').click(function () {
+            $('.form-section').hide();
+            $('#register-form').show();
+        });
+    </script>
+</body>
+</html>

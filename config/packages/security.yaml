@@ -1,0 +1,56 @@
+security:
+    enable_authenticator_manager: true
+    # https://symfony.com/doc/current/security.html#registering-the-user-hashing-passwords
+    password_hashers:
+        App\Entity\User:
+            algorithm: bcrypt  # Используем bcrypt для хеширования паролей
+            cost: 12           # Стандартное значение для bcrypt, можно увеличить для большей безопасности
+            # Вы также можете использовать argon2i или argon2id
+            # algorithm: argon2i
+            # time_cost: 4
+            # memory_cost: 1024
+
+    # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
+    providers:
+        users_in_database:  # Настроим провайдер для загрузки пользователей из базы данных
+            entity:
+                class: App\Entity\User
+                property: username  # Идентификация пользователя по имени пользователя
+
+    firewalls:
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+        main:
+            lazy: true
+            provider: users_in_database  # Используем наш провайдер для загрузки пользователей из базы данных
+
+            # Активируем различные способы аутентификации
+            form_login:
+                login_path: app_login  # Страница входа
+                check_path: app_login  # Путь для проверки данных формы
+
+            logout:
+                path: app_logout
+                target: app_login
+
+    # Управление доступом
+    access_control:
+        # - { path: ^/admin, roles: ROLE_ADMIN }
+        # - { path: ^/profile, roles: ROLE_USER }
+        - { path: ^/dashboard, roles: ROLE_USER }
+        - { path: ^/register, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+
+
+when@test:
+    security:
+        password_hashers:
+            # By default, password hashers are resource intensive and take time. This is
+            # important to generate secure password hashes. In tests however, secure hashes
+            # are not important, waste resources and increase test times. The following
+            # reduces the work factor to the lowest possible values.
+            Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
+                algorithm: auto
+                cost: 4 # Lowest possible value for bcrypt
+                time_cost: 3 # Lowest possible value for argon
+                memory_cost: 10 # Lowest possible value for argon
