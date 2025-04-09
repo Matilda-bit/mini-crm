@@ -1,5 +1,15 @@
 {# templates/dashboard/manage_users.html.twig #}
+
+{% for message in app.flashes('error') %}
+    <div style="color: red">{{ message }}</div>
+{% endfor %}
+{% for message in app.flashes('success') %}
+    <div style="color: green">{{ message }}</div>
+{% endfor %}
+
 <h2>Manage Users</h2>
+
+{% if users is not empty %}
 <table id="usersTable" class="display">
     <thead>
         <tr>
@@ -40,3 +50,6 @@
         {% endfor %}
     </tbody>
 </table>
+{% else %}
+    <p><em>No users found...</em></p>
+{% endif %}

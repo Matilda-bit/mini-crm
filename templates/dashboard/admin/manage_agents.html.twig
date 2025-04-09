@@ -1,4 +1,13 @@
+{% for message in app.flashes('error') %}
+    <div style="color: red">{{ message }}</div>
+{% endfor %}
+{% for message in app.flashes('success') %}
+    <div style="color: green">{{ message }}</div>
+{% endfor %}
+
 <h2>Manage Agents</h2>
+
+{% if agents is not empty %}
 <table id="agentsTable" class="display">
     <thead>
         <tr>
@@ -6,6 +15,7 @@
             <th>Username</th>
             <th>Role</th>
             <th>Date Created</th>
+            <th>Agent ID</th>
             <th>Assigned Agent</th>
         </tr>
     </thead>
@@ -17,11 +27,24 @@
                 <td>{{ agent.role }}</td>
                 <td>{{ agent.dateCreated|date('Y-m-d') }}</td>
                 <td>
+                    {% if agent.agent %}
+                        {{ agent.agent.id }}
+                    {% else %}
+                        NAN
+                    {% endif %}
+                </td>
+                <td>
                     <form method="POST" action="{{ path('assign_agent', {'userId': agent.id}) }}">
                         <select name="agent_id" class="form-control">
                             {% for otherAgent in agents %}
                                 {% if otherAgent.id != agent.id %}  {# Исключаем назначение самому себе #}
-                                    <option value="{{ otherAgent.id }}" {% if otherAgent.id == agent.agent.id %}selected{% endif %}>{{ otherAgent.username }}</option>
+                                    <option value="{{ otherAgent.id }}"
+                                        {% if agent.agent and otherAgent.id == agent.agent.id %}
+                                            selected
+                                        {% endif %}
+                                    >
+                                        {{ otherAgent.username }}
+                                    </option>
                                 {% endif %}
                             {% endfor %}
                         </select>
@@ -33,3 +56,6 @@
         {% endfor %}
     </tbody>
 </table>
+{% else %}
+    <p><em>No agents found...</em></p>
+{% endif %}

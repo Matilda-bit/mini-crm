@@ -16,6 +16,10 @@ class AdminProfileController extends AbstractController
     #[Route('/admin/dashboard', name: 'admin_dashboard', methods: ['GET'])]
     public function index(UserInterface $user): Response
     {
+        
+        if (!in_array('ADMIN', $user->getRoles())) {
+            throw new AccessDeniedException('Access Denied.');
+        }
         list($users, $agents) = $this->filterUsersByRole($user);
         $trades = $this->getDoctrine()->getRepository(Trade::class)->findBy(['user' => $user, 'status' => 'open']);
          
