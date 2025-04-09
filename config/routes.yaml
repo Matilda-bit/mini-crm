@@ -1,3 +1,16 @@
 #index:
 #    path: /
 #    controller: App\Controller\DefaultController::index
+
+
+user_dashboard:
+    path: /user/dashboard
+    controller: App\Controller\ProfileController::index
+
+agent_dashboard:
+    path: /agent/dashboard
+    controller: App\Controller\AgentProfileController::index
+
+admin_dashboard:
+    path: /admin/dashboard
+    controller: App\Controller\AdminProfileController::index
