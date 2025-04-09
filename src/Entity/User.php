@@ -25,8 +25,7 @@ class User implements UserInterface
     #[Assert\Length(min: 6, minMessage: "Password must be at least 6 characters long.")]
     private ?string $password = null;
 
-
-    #[ORM\Column(type: 'datetime')]
+    #[ORM\Column(type: 'datetime', nullable: true)]
     private ?\DateTimeInterface $loginTime = null;
 
     #[ORM\Column(type: 'currency_enum')]
@@ -41,10 +40,9 @@ class User implements UserInterface
     #[ORM\Column(type: 'decimal', precision: 15, scale: 2)]
     private ?string $equity = null;
 
-    #[ORM\OneToOne(targetEntity: self::class, cascade: ['persist', 'remove'])]
-    #[ORM\JoinColumn(nullable: true)]
-    private ?self $agent = null;
-
+    #[ORM\OneToOne(targetEntity: User::class, cascade: ['persist', 'remove'])]
+    #[ORM\JoinColumn(name: 'agent_id', referencedColumnName: 'id', nullable: true)]
+    private ?User $agent = null;
 
     #[ORM\Column(type: 'datetime')]
     private \DateTimeInterface $dateCreated;
@@ -52,7 +50,7 @@ class User implements UserInterface
     // Symfony Security Methods
     public function getRoles(): array
     {
-        return [$this->role ?? 'USER'];
+        return [$this->role];
     }
 
     public function eraseCredentials(): void
@@ -123,7 +121,7 @@ class User implements UserInterface
 
     public function getRole(): ?string
     {
-        return 'ROLE_' . $this->role;
+        return $this->role;
     }
 
     public function setRole(string $role): static
@@ -154,12 +152,12 @@ class User implements UserInterface
         return $this;
     }
 
-    public function getAgent(): ?self
+    public function getAgent(): ?User
     {
         return $this->agent;
     }
 
-    public function setAgent(self $agent): static
+    public function setAgent(User $agent): static
     {
         $this->agent = $agent;
         return $this;

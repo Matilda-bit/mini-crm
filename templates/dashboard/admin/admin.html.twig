@@ -1,0 +1,97 @@
+{# templates/dashboard/agent.html.twig #}
+
+{#
+    <!-- <p><strong>ID:</strong> {{ user.id }}</p>
+    <p><strong>Username:</strong> {{ user.username }}</p>
+    <p><strong>Date Created:</strong> {{ user.dateCreated }}</p> -->
+#}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+</head>
+<body>
+
+    <a href="{{ path('app_logout') }}">Logout</a>
+
+    <h1>Welcome, {{ user.username }}</h1>
+    <h3>This is Admin dashboard, and using: {{ controller_name }}</h3>
+
+    <p><strong>ID:</strong> {{ user.id }}</p>
+    <p><strong>Last Login:</strong> {{ user.loginTime ? user.loginTime|date('Y-m-d H:i:s') : 'Never' }}</p>
+    <p><strong>Role:</strong> {{ user.role }}</p>
+    <p><strong>Currency:</strong> {{ user.currency }}</p>
+    <p><strong>Total PNL:</strong> {{ user.totalPnl }}</p>
+    <p><strong>Equity:</strong> {{ user.equity }}</p>
+
+    <h2>Open Trade for a User</h2>
+    <form action="/open-trade" method="POST">
+        <label for="target_user">User:</label>
+        <select name="target_user" id="target_user">
+            {% for u in users %}
+                <option value="{{ u.id }}">{{ u.username }}</option>
+            {% endfor %}
+        </select><br><br>
+
+       {# <!-- {% include 'dashboard/_trade_form.html.twig' %} --> #}
+
+        <button type="submit">Open Trade</button>
+    </form>
+
+        {% include 'dashboard/admin/manage_users.html.twig' with {'users': users, 'agents': agents} %}
+
+        {% include 'dashboard/admin/manage_agents.html.twig' with {'agents': agents} %}
+
+
+    <h2>Trades</h2>
+    <table id="tradesTable" class="display">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>User</th>
+                <th>Position</th>
+                <th>Entry</th>
+                <th>Close</th>
+                <th>Status</th>
+                <th>PNL</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for trade in trades %}
+                <tr>
+                    <td>{{ trade.id }}</td>
+                    <td>{{ trade.user.username }}</td>
+                    <td>{{ trade.position }}</td>
+                    <td>{{ trade.entryRate }}</td>
+                    <td>{{ trade.closeRate ?: '---' }}</td>
+                    <td>{{ trade.status }}</td>
+                    <td>{{ trade.pnl }}</td>
+                    <td>
+                        {% if trade.status == 'open' %}
+                            <form method="POST" action="/close-trade/{{ trade.id }}">
+                                <button type="submit">Close</button>
+                            </form>
+                        {% else %}
+                            ---
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        \$(document).ready(function() {
+            \$('#usersTable').DataTable();
+            \$('#agentsTable').DataTable();
+            \$('#tradesTable').DataTable();
+        });
+    </script>
+</body>
+</html>

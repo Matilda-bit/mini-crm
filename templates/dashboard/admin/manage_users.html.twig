@@ -1,0 +1,42 @@
+{# templates/dashboard/manage_users.html.twig #}
+<h2>Manage Users</h2>
+<table id="usersTable" class="display">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Date Created</th>
+            <th>Agent ID</th>
+            <th>Assigned Agent</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for u in users %}
+            <tr>
+                <td>{{ u.id }}</td>
+                <td>{{ u.username }}</td>
+                <td>{{ u.role }}</td>
+                <td>{{ u.dateCreated|date('Y-m-d') }}</td>
+                <td>
+                    {% if u.agent %}
+                        {{ u.agent.id }}
+                    {% else %}
+                        NAN
+                    {% endif %}
+                </td>
+                <td>
+                    <form method="POST" action="{{ path('assign_agent', {'userId': user.id}) }}">
+                        <select name="agent_id" class="form-control">
+                            {% for agent in agents %}
+                                <option value="{{ agent.id }}" {% if agent.id == u.agent.id %}selected{% endif %}>{{ agent.username }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="user_id" value="{{ u.id }}">
+                        <button type="submit">Assign</button>
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
