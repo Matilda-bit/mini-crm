@@ -1,5 +1,9 @@
 {# templates/dashboard/admin/_assets_view.html.twig #}
 
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
 <h2>Assets</h2>
 <button id="viewAssetsButton">View Assets</button>
 
@@ -14,37 +18,90 @@
                 <th>Lot Size</th>
             </tr>
         </thead>
-        <tbody>
-            <!-- Данные активов будут вставляться сюда -->
-        </tbody>
+        <tbody></tbody>
     </table>
 </div>
-
 <script>
-    // Подключаемся к WebSocket на сервере (он должен быть настроен для отправки данных)
-    const ws = new WebSocket('wss://127.0.0.1:8080'); // Замените на правильный адрес
+    let dataTable;
 
-    // При получении сообщения обновляем таблицу на странице
-    ws.onmessage = function(event) {
-        const data = JSON.parse(event.data);
+    document.addEventListener('DOMContentLoaded', () => {
+        const assetsContainer = document.getElementById('assetsContainer');
+        const viewBtn = document.getElementById('viewAssetsButton');
 
-        // Находим таблицу и очищаем её
-        const assetsTableBody = document.getElementById('assetsTable').getElementsByTagName('tbody')[0];
-        assetsTableBody.innerHTML = '';
-        console.log('Message from server:', data);
-        // console.log(data); 
+        dataTable = new DataTable('#assetsTable', {
+            columns: [
+                { title: "Asset Name" },
+                { title: "Bid" },
+                { title: "Ask" },
+                { title: "Lot Size" }
+            ]
+        });
 
-        // Добавляем строки в таблицу для каждого актива
-        if (Array.isArray(data)) {
-            data.forEach(asset => {
-                const row = assetsTableBody.insertRow();
-                row.insertCell(0).textContent = asset.asset_name;
-                row.insertCell(1).textContent = asset.bid;
-                row.insertCell(2).textContent = asset.ask;
-                row.insertCell(3).textContent = asset.lot_size;
-            });
-        } else {
-             console.error('Data is not an array:', data);
-        }           
-    };
+        viewBtn.addEventListener('click', () => {
+            const isHidden = assetsContainer.style.display === 'none';
+            assetsContainer.style.display = isHidden ? 'block' : 'none';
+        });
+
+        const ws = new WebSocket('wss://127.0.0.1:8080');
+
+        ws.onopen = () => {
+            console.log('WebSocket connection established');
+        };
+
+        ws.onerror = error => {
+            console.error('WebSocket Error:', error);
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket connection closed');
+        };
+
+        let logCount = 0;
+
+        ws.onmessage = (event) => {
+            let data;
+
+            try {
+                data = JSON.parse(event.data);
+            } catch (err) {
+                console.error('Invalid JSON:', event.data);
+                return;
+            }
+
+            if (logCount < 5) {
+                console.log('WS received:', data);
+                logCount++;
+            }
+
+            if (Array.isArray(data)) {
+                updateAssetsTable(data);
+            } else if (data.asset_name) {
+                updateAssetsTable([data]);
+            } else if (data.message) {
+                console.log('Message:', data.message);
+            } else if (data.update) {
+                console.log('Update:', data.update);
+            } else {
+                console.warn('Unexpected data format:', data);
+            }
+        };
+    });
+
+    function updateAssetsTable(data) {
+        if (!dataTable) return;
+
+        dataTable.clear();
+
+        data.forEach(asset => {
+            dataTable.row.add([
+                asset.asset_name || '',
+                asset.bid || '',
+                asset.ask || '',
+                asset.lot_size || ''
+            ]);
+        });
+
+        dataTable.draw();
+    }
 </script>
+
