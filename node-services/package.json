@@ -1,0 +1,21 @@
+{
+  "name": "services",
+  "version": "1.0.0",
+  "main": "binance-ws.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start-all": "concurrently \"node server.js\" \"node binance-ws.js\" "
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "mysql2": "^3.14.0",
+    "ws": "^8.18.1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
