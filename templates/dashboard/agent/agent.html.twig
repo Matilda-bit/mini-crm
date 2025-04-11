@@ -14,7 +14,7 @@
 
     <a href="{{ path('app_logout') }}">Logout</a>
 
-    <h1>Welcome, {{ user.username }}</h1>
+    <h1>Welcome1 {{ user.username }}</h1>
     <h3>This is Agent dashboard, and using: {{ controller_name }}</h3>
 
     <p><strong>ID:</strong> {{ user.id }}</p>
@@ -83,10 +83,8 @@
     </table>
 
     <script>
-        \$(document).ready(function() {
-            \$('#usersTable').DataTable();
-            \$('#agentsTable').DataTable();
-            \$('#tradesTable').DataTable();
+        $(document).ready(function() {
+            $('#tradesTable').DataTable();
         });
     </script>
 </body>
