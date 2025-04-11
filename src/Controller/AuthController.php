@@ -125,8 +125,13 @@ class AuthController extends AbstractController
     private function redirectToDashboard(): Response
     {
         $user = $this->getUser();
+        
+        if (!$user) {
+            return $this->redirectToRoute('app_login_register'); // или что-то другое
+        }
+
         $role = $user->getRole();
-        // Проверяем роль пользователя и перенаправляем на соответствующую страницу
+
         if ($role === 'REP') {
             return $this->redirectToRoute('agent_dashboard');
         }

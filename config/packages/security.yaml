@@ -24,21 +24,19 @@ security:
         main:
             lazy: true
             provider: users_in_database  # Используем наш провайдер для загрузки пользователей из базы данных
-
+            custom_authenticators:
+            - App\Security\LoginFormAuthenticator
+            entry_point: App\Security\LoginFormAuthenticator
             # Активируем различные способы аутентификации
-            form_login:
-                login_path: app_login  # Страница входа
-                check_path: app_login  # Путь для проверки данных формы
 
             logout:
                 path: app_logout
                 target: app_login
-
     # Управление доступом
     access_control:
         # - { path: ^/admin, roles: ROLE_ADMIN }
         # - { path: ^/profile, roles: ROLE_USER }
-        - { path: ^/dashboard, roles: ROLE_USER }
+        - { path: ^/dashboard, roles: [USER, ADMIN, REP] }
         - { path: ^/register, roles: IS_AUTHENTICATED_ANONYMOUSLY }
 
 

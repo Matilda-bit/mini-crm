@@ -19,12 +19,6 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
-    
-    # Add explicit configuration for AuthController
-    App\Controller\AuthController:
-        arguments:
-            $guardHandler: '@security.authentication.guard_handler'  # Specify the GuardAuthenticatorHandler
-            $firewallMap: '@security.firewall.map'                    # Corrected service name
    
 
     # add more service definitions when explicit configuration is needed
