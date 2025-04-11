@@ -1,0 +1,50 @@
+{# templates/dashboard/admin/_assets_view.html.twig #}
+
+<h2>Assets</h2>
+<button id="viewAssetsButton">View Assets</button>
+
+<div id="assetsContainer" style="display: none;">
+    <h3>Assets List</h3>
+    <table id="assetsTable">
+        <thead>
+            <tr>
+                <th>Asset Name</th>
+                <th>Bid</th>
+                <th>Ask</th>
+                <th>Lot Size</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Данные активов будут вставляться сюда -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // Подключаемся к WebSocket на сервере (он должен быть настроен для отправки данных)
+    const ws = new WebSocket('wss://127.0.0.1:8080'); // Замените на правильный адрес
+
+    // При получении сообщения обновляем таблицу на странице
+    ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+
+        // Находим таблицу и очищаем её
+        const assetsTableBody = document.getElementById('assetsTable').getElementsByTagName('tbody')[0];
+        assetsTableBody.innerHTML = '';
+        console.log('Message from server:', data);
+        // console.log(data); 
+
+        // Добавляем строки в таблицу для каждого актива
+        if (Array.isArray(data)) {
+            data.forEach(asset => {
+                const row = assetsTableBody.insertRow();
+                row.insertCell(0).textContent = asset.asset_name;
+                row.insertCell(1).textContent = asset.bid;
+                row.insertCell(2).textContent = asset.ask;
+                row.insertCell(3).textContent = asset.lot_size;
+            });
+        } else {
+             console.error('Data is not an array:', data);
+        }           
+    };
+</script>
