@@ -5,31 +5,32 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Form\RegistrationFormType;
 use App\Repository\UserRepository;
+use App\Security\LoginFormAuthenticator;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
-use Symfony\Component\Security\Guard\GuardAuthenticatorHandler;
+use Symfony\Component\Security\Http\Authentication\UserAuthenticatorInterface;
 use Symfony\Component\Security\Http\FirewallMapInterface;
 
 class AuthController extends AbstractController
 {
 
-    private $guardHandler;
-    private $firewallMap;
+    private $authenticator;
+    private UserAuthenticatorInterface $userAuthenticator;
 
-    // Инъекция зависимостей через конструктор
     public function __construct(
-        GuardAuthenticatorHandler $guardHandler,
-        FirewallMapInterface $firewallMap
+        UserAuthenticatorInterface $userAuthenticator,
+        LoginFormAuthenticator $authenticator
     ) {
-        $this->guardHandler = $guardHandler;
-        $this->firewallMap = $firewallMap;
+        $this->userAuthenticator = $userAuthenticator;
+        $this->authenticator = $authenticator;
     }
 
 
@@ -43,11 +44,8 @@ class AuthController extends AbstractController
     ): Response {
         $user = new User();
         $form = $this->createForm(RegistrationFormType::class, $user);
-
-        // Обрабатываем данные формы
         $form->handleRequest($request);
 
-        // Если форма отправлена и валидна
         if ($form->isSubmitted() && $form->isValid()) {
             // Проверяем, существует ли уже такой пользователь
             if ($userRepository->findOneBy(['username' => $user->getUsername()])) {
@@ -55,19 +53,21 @@ class AuthController extends AbstractController
                 return $this->redirectToRoute('app_login_register');
             }
 
-            // Хешируем пароль
             $user->setPassword($passwordHasher->hashPassword($user, $user->getPassword()));
+            $username = $user->getUsername();
+            if (strpos($username, 'agent') === 0) {
+                $user->setRole('REP');
+            } elseif (strpos($username, 'admin') === 0) {
+                $user->setRole('ADMIN');
+            } else {
+                $user->setRole('USER');
+            }
 
-            // Устанавливаем роль по умолчанию
             $user->setLoginTime(new \DateTime());
-
             $user->setTotalPnl(0);
             $user->setEquity(0);
-            $user->setRole('USER');
             $user->setDateCreated(new \DateTime());
 
-
-            // Если есть ошибки валидации, отобразите их
             $errors = $validator->validate($user);
 
             if (count($errors) > 0) {
@@ -80,34 +80,27 @@ class AuthController extends AbstractController
             // Отладка: выводим объект перед сохранением
             dump($user);  // Symfony Debugging tool
 
-            dump($user->getRole());
-
-
-            // Сохраняем пользователя в базе данных
             $em->persist($user);
             $em->flush();
 
-            // Отправляем сообщение об успехе
+
             $this->addFlash('success', 'Registration successful! You can now log in.');
+            $this->loginAfterRegistration($request,$user);
 
-            // Опционально: автоматически авторизовать пользователя после регистрации
-            $this->loginAfterRegistration($user);
-
-            return $this->redirectToRoute('app_dashboard');
+            return $this->redirectToDashboard();
         }
 
-        // Рендерим шаблон и передаем форму
         return $this->render('auth/index.html.twig', [
             'registrationForm' => $form->createView(),
         ]);
     }
 
-    private function loginAfterRegistration(User $user): void
+    private function loginAfterRegistration(Request $request, User $user): void
     {
-        // Логика для аутентификации пользователя после регистрации
-        $this->guardHandler->authenticateUserAndHandleSuccess(
+
+        $this->userAuthenticator->authenticateUser(
             $user,
-            $this->firewallMap->getFirewallConfig('main'),
+            $this->authenticator,
             $request
         );
     }
@@ -125,7 +118,23 @@ class AuthController extends AbstractController
             return $this->redirectToRoute('app_login_register');
         }
 
-        return $this->redirectToRoute('app_dashboard');
+        return $this->redirectToDashboard();
+    }
+
+    //to check - not in use???
+    private function redirectToDashboard(): Response
+    {
+        $user = $this->getUser();
+        $role = $user->getRole();
+        // Проверяем роль пользователя и перенаправляем на соответствующую страницу
+        if ($role === 'REP') {
+            return $this->redirectToRoute('agent_dashboard');
+        }
+        if ($role === 'ADMIN') {
+            return $this->redirectToRoute('admin_dashboard');
+        }
+
+        return $this->redirectToRoute('user_dashboard');
     }
 
     #[Route('/logout', name: 'app_logout')]
