@@ -8,6 +8,20 @@
 <h2>Manage Agents</h2>
 
 {% if agents is not empty %}
+
+<div style="margin-bottom: 10px;">
+    <select id="columnSelect" style="padding: 5px;">
+        <option value="all">Search All Columns</option>
+        <option value="0">ID</option>
+        <option value="1">Username</option>
+        <option value="3">Date Created</option>
+        <option value="4">Agent ID</option>
+    </select>
+
+    <input type="text" id="customSearch" placeholder="Search..." style="padding: 5px;">
+</div>
+
+
 <table id="agentsTable" class="display">
     <thead>
         <tr>
@@ -21,41 +35,85 @@
     </thead>
     <tbody>
         {% for agent in agents %}
-            <tr>
-                <td>{{ agent.id }}</td>
-                <td>{{ agent.username }}</td>
-                <td>{{ agent.role }}</td>
-                <td>{{ agent.dateCreated|date('Y-m-d') }}</td>
-                <td>
-                    {% if agent.agent %}
-                        {{ agent.agent.id }}
-                    {% else %}
-                        NAN
-                    {% endif %}
-                </td>
-                <td>
-                    <form method="POST" action="{{ path('assign_agent', {'userId': agent.id}) }}">
-                        <select name="agent_id" class="form-control">
-                            {% for otherAgent in agents %}
-                                {% if otherAgent.id != agent.id %}  {# Исключаем назначение самому себе #}
-                                    <option value="{{ otherAgent.id }}"
-                                        {% if agent.agent and otherAgent.id == agent.agent.id %}
-                                            selected
-                                        {% endif %}
-                                    >
-                                        {{ otherAgent.username }}
-                                    </option>
-                                {% endif %}
-                            {% endfor %}
-                        </select>
-                        <input type="hidden" name="user_id" value="{{ agent.id }}">
-                        <button type="submit">Assign</button>
-                    </form>
-                </td>
-            </tr>
+            {% if agent.id != user.id %} 
+                <tr>
+                    <td>{{ agent.id }}</td>
+                    <td>{{ agent.username }}</td>
+                    <td>{{ agent.role }}</td>
+                    <td>{{ agent.dateCreated|date('Y-m-d') }}</td>
+                    <td>
+                        {% if agent.agent %}
+                            {{ agent.agent.id }}
+                        {% else %}
+                            NAN
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="POST" action="{{ path('assign_agent', {'userId': agent.id}) }}" onsubmit="return validateForm(this)">
+                            <select name="agent_id" class="form-control">
+                                {% for otherAgent in agents %}
+                                    {% if otherAgent.id != agent.id %} 
+                                        <option value="{{ otherAgent.id }}"
+                                            {% if agent.agent and otherAgent.id == agent.agent.id %}
+                                                selected
+                                            {% endif %}
+                                        >
+                                            {{ otherAgent.username }}
+                                        </option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                            <input type="hidden" name="user_id" value="{{ agent.id }}">
+                            <button type="submit">Assign</button>
+                        </form>
+                    </td>
+                </tr>
+             {% endif %}
         {% endfor %}
+
+        <script>
+            function validateForm(form) {
+                // Проверка, выбрано ли значение в select
+                var select = form.querySelector('select[name="agent_id"]');
+                if (select.value === '') {
+                    alert('Please select an agent!');
+                    return false;  // Не отправлять форму
+                }
+                return true;  // Отправить форму
+            }
+        </script>
     </tbody>
 </table>
 {% else %}
     <p><em>No agents found...</em></p>
 {% endif %}
+
+
+
+{# todo: move it to assets/js/table-search.js #}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script>
+    $(document).ready(function() {
+        const table = $('#agentsTable').DataTable({
+            dom: 'lrtip', // убираем стандартный input
+            searching: true
+        });
+
+        $('#customSearch').on('keyup', function() {
+            const selectedColumn = $('#columnSelect').val();
+            const value = this.value;
+
+            if (selectedColumn === 'all') {
+                table.search(value).draw(); // глобальный поиск
+            } else {
+                table.search('').columns().search(''); // сброс всех фильтров
+                table.column(selectedColumn).search(value).draw(); // поиск по выбранной колонке
+            }
+        });
+
+        $('#columnSelect').on('change', function() {
+            $('#customSearch').trigger('keyup'); // сразу применить поиск при смене колонки
+        });
+    });
+</script>

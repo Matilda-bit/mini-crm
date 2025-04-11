@@ -9,6 +9,8 @@
 
 <h2>Manage Users</h2>
 
+{% if users is not empty %}
+
 <div style="margin-bottom: 10px;">
     <select id="columnSelect" style="padding: 5px;">
         <option value="all">Search All Columns</option>
@@ -20,7 +22,6 @@
 
     <input type="text" id="customSearch" placeholder="Search..." style="padding: 5px;">
 </div>
-{% if users is not empty %}
 
 <table id="usersTable" class="display">
     <thead>
@@ -67,7 +68,7 @@
 {% endif %}
 
 
-{# todo: move it to assets/js/user-search.js #}
+{# todo: move it to assets/js/table-search.js #}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
 <script>
