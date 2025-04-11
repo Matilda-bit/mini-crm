@@ -31,6 +31,8 @@
             <label>Password:
                 <input type="password" name="_password" required>
             </label>
+
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
             <button type="submit">Login</button>
         </form>
     </div>
