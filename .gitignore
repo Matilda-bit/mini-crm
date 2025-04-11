@@ -20,6 +20,14 @@
 /phpunit.xml
 ###< symfony/phpunit-bridge ###
 
+###> Node Services (custom) ###
+/node-services/node_modules/
+/node-services/ssl/
+/node-services/dist/
+/node-services/.env
+/node-services/.env.local
+###< Node Services ###
+
 
 ### custom ###
 
