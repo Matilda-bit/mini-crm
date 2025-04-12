@@ -1,0 +1,11 @@
+{% if error is defined %}
+    {% for message in app.flashes(error) %}
+        <div style="color: red; margin-bottom: 5px;">{{ message }}</div>
+    {% endfor %}
+{% endif %}
+
+{% if success is defined %}
+    {% for message in app.flashes(success) %}
+        <div style="color: green; margin-bottom: 5px;">{{ message }}</div>
+    {% endfor %}
+{% endif %}
