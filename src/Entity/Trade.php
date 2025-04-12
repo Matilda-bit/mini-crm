@@ -5,11 +5,6 @@ namespace App\Entity;
 use App\Repository\TradeRepository;
 use Doctrine\ORM\Mapping as ORM;
 
-
-
-
-
-
 #[ORM\Entity(repositoryClass: TradeRepository::class)]
 #[ORM\Table(name: "trades")]
 class Trade
@@ -20,16 +15,18 @@ class Trade
     const STATUS_LOSE = 'lose';
     const STATUS_TIE = 'tie';
 
-
-
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: User::class)]
-    #[ORM\JoinColumn(name: "user_id", referencedColumnName: "id")]
+    #[ORM\JoinColumn(name: "user_id", referencedColumnName: "id", nullable: false)]
     private ?User $user = null;
+
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(name: "opened_by_agent_id", referencedColumnName: "id", nullable: false)]
+    private ?User $agentId = null;
 
     #[ORM\Column(type: "decimal", precision: 15, scale: 2, nullable: true)]
     private ?float $tradeSize = null;
@@ -83,6 +80,17 @@ class Trade
     public function setUser(?User $user): self
     {
         $this->user = $user;
+        return $this;
+    }
+
+    public function getAgentId(): ?User
+    {
+        return $this->agentId;
+    }
+
+    public function setAgentId(?User $agentId): self
+    {
+        $this->agentId = $agentId;
         return $this;
     }
 

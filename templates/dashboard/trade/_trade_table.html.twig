@@ -1,0 +1,58 @@
+{# templates/dashboard/trade/_trade_table.html.twig #}
+
+{% block javascripts %}
+   
+    <script>
+        $(document).ready(function() {
+            $('#tradesTable').DataTable();
+        });
+    </script>
+{% endblock %}
+
+{% block content %}
+    <h2>Trades</h2>
+
+    {% include 'components/flash_messages.html.twig' with {
+        'error': 'close_trade_error',
+        'success': 'close_trade_success'
+    } %}
+
+    <table id="tradesTable" class="display">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>User</th>
+                <th>Opened By</th>
+                <th>Position</th>
+                <th>Entry</th>
+                <th>Close</th>
+                <th>Status</th>
+                <th>PNL</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for trade in trades %}
+                <tr>
+                    <td>{{ trade.id }}</td>
+                    <td>{{ trade.user.username }}</td>
+                    <td>{{ trade.agentId.username }}</td>
+                    <td>{{ trade.position }}</td>
+                    <td>{{ trade.entryRate }}</td>
+                    <td>{{ trade.closeRate ?: '---' }}</td>
+                    <td>{{ trade.status }}</td>
+                    <td>{{ trade.pnl }}</td>
+                    <td>
+                        {% if trade.status == 'open' %}
+                            <form method="POST" action="/close-trade/{{ trade.id }}">
+                                <button type="submit">Close</button>
+                            </form>
+                        {% else %}
+                            ---
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
