@@ -34,9 +34,10 @@ security:
                 target: app_login
     # Управление доступом
     access_control:
-        # - { path: ^/admin, roles: ROLE_ADMIN }
-        # - { path: ^/profile, roles: ROLE_USER }
-        - { path: ^/dashboard, roles: [USER, ADMIN, REP] }
+        - { path: ^/admin, roles: ROLE_ADMIN }
+        - { path: ^/agent, roles: ROLE_REP }
+        - { path: ^/profile, roles: ROLE_USER }
+        - { path: ^/dashboard, roles: [ROLE_USER, ROLE_ADMIN, ROLE_REP] }
         - { path: ^/register, roles: IS_AUTHENTICATED_ANONYMOUSLY }
 
 
