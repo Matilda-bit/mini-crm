@@ -31,14 +31,16 @@ security:
 
             logout:
                 path: app_logout
-                target: app_login
+                target: app_login_register
+                invalidate_session: true 
     # Управление доступом
     access_control:
         - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/agent, roles: ROLE_REP }
         - { path: ^/profile, roles: ROLE_USER }
-        - { path: ^/dashboard, roles: [ROLE_USER, ROLE_ADMIN, ROLE_REP] }
         - { path: ^/register, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+        - { path: ^/login, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+        - { path: ^/, roles: IS_AUTHENTICATED_ANONYMOUSLY }
 
 
 when@test:
