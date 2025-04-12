@@ -1,0 +1,56 @@
+{# templates/dashboard/trade/_trade_form.html.twig #}
+
+<h2>Open Trade for a User</h2>
+
+
+{% include 'components/flash_messages.html.twig' with {
+    'error': 'open_trade_error',
+    'success': 'open_trade_success'
+} %}
+
+<button id="toggleTradeForm">Open New Trade</button>
+
+
+<!-- Форма скрыта по умолчанию -->
+<div id="tradeFormContainer" style="display: none; margin-top: 20px;">
+    <form action="/open-trade" method="POST">
+        <!-- Выбор пользователя -->
+        <label for="target_user">User:</label>
+        <select name="target_user" id="target_user" required>
+            {% for u in users %}
+                <option value="{{ u.id }}">{{ u.username }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <!-- Выбор позиции -->
+        <label for="position">Position:</label>
+        <select name="position" id="position" required>
+            <option value="buy">Buy</option>
+            <option value="sell">Sell</option>
+        </select><br><br>
+
+        <!-- Количество лотов -->
+        <label for="lot_count">Lot Count:</label>
+        <input type="number" name="lot_count" id="lot_count" min="0.1" max="100" step="0.1" required><br><br>
+
+        <!-- Стоп-лосс -->
+        <label for="sl">Stop Loss (SL):</label>
+        <input type="number" name="sl" id="sl"><br><br>
+
+        <!-- Тейк-профит -->
+        <label for="tp">Take Profit (TP):</label>
+        <input type="number" name="tp" id="tp"><br><br>
+
+        <!-- Кнопка отправки -->
+        <button type="submit">Open Trade</button>
+    </form>
+</div>
+
+<script>
+    $(document).ready(function() {
+        document.getElementById('toggleTradeForm').addEventListener('click', function() {
+            var formContainer = document.getElementById('tradeFormContainer');
+            formContainer.style.display = formContainer.style.display === 'none' ? 'block' : 'none';
+        });
+    });
+</script>

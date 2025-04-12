@@ -6,10 +6,10 @@ use App\Entity\User;
 use App\Entity\Trade;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 use Symfony\Component\VarDumper\VarDumper;
@@ -41,53 +41,64 @@ class AdminProfileController extends AbstractController
 
     private function getAllSubordinates(UserInterface $user): array
     {
+    
         $userRepository = $this->getDoctrine()->getRepository(User::class);
         $allUsers = $userRepository->findAll();
-
+    
         $map = [];
+        $orphans = [];
         foreach ($allUsers as $u) {
             $agent = $u->getAgent();
             if ($agent !== null) {
                 $map[$agent->getId()][] = $u;
+            } elseif ($u->getId() !== $user->getId()) {
+                $orphans[] = $u;
             }
         }
-
+    
         $agents = [];
         $users = [];
         $queue = [$user];
-        $visitedIds = [];
-
+        $visitedIds = [$user->getId()];
+    
+        foreach ($orphans as $u) {
+            $uid = $u->getId();
+            if (!in_array($uid, $visitedIds, true)) {
+                $visitedIds[] = $uid;
+                $queue[] = $u;
+            }
+        }
+    
         while (!empty($queue)) {
-            $current = array_pop($queue);
-            $visitedIds[] = $current->getId();
+            /** @var UserInterface $current */
+            $current = array_shift($queue);
             $subordinates = $map[$current->getId()] ?? [];
-
+    
             foreach ($subordinates as $sub) {
+                $subId = $sub->getId();
+                if (in_array($subId, $visitedIds, true)) {
+                    continue;
+                }
+    
+                $visitedIds[] = $subId;
+    
                 if ($sub->getRole() === 'REP') {
-                    if (!in_array($sub, $agents, true)) {
-                        $agents[] = $sub;
-                        $queue[] = $sub;
-                    }
+                    $agents[] = $sub;
+                    $queue[] = $sub;
                 } elseif ($sub->getRole() === 'USER') {
-                    if (!in_array($sub, $users, true)) {
-                        $users[] = $sub;
-                    }
+                    $users[] = $sub;
                 }
             }
         }
-
-        if ($user->getRole() === 'ADMIN') {
-            foreach ($allUsers as $u) {
-                if ($u->getAgent() === null && !in_array($u->getId(), $visitedIds)) {
-                    if ($u->getRole() === 'REP') {
-                        $agents[] = $u;
-                    } elseif ($u->getRole() === 'USER') {
-                        $users[] = $u;
-                    }
-                }
+    
+        foreach ($orphans as $u) {
+            if ($u->getRole() === 'REP' && !in_array($u, $agents, true)) {
+                $agents[] = $u;
+            } elseif ($u->getRole() === 'USER' && !in_array($u, $users, true)) {
+                $users[] = $u;
             }
         }
-
+    
         return [$users, $agents];
     }
 
@@ -118,37 +129,46 @@ class AdminProfileController extends AbstractController
     public function assignAgent(Request $request, UserInterface $currentUser): RedirectResponse
     {
         //must-have - check role of current user
-        $allowedRoles = ['ADMIN', 'REP'];
+        $allowedRoles = ['ADMIN'];
         if (!in_array($currentUser->getRole(), $allowedRoles)) {
             throw new AccessDeniedException('You do not have permission to assign agents.');
         }
         
         $userId = $request->request->get('user_id');
         $agentId = $request->request->get('agent_id');
-        $user = $this->getDoctrine()->getRepository(User::class)->find($userId);
-        $agent = $this->getDoctrine()->getRepository(User::class)->find($agentId);
+
+        $userRepo = $this->getDoctrine()->getRepository(User::class);
+        $user = $userRepo->find($userId);
+        $agent = $userRepo->find($agentId);
+
         $isUser = $user->getRole() === 'USER';
         $errorTitle = $isUser ? 'users_tb_error' : 'agent_tb_error';
         $successTitle = $isUser ? 'users_tb_success' : 'agents_tb_success';
         
-        if (!$user) {
-            $this->addFlash($errorTitle, 'User not found!');
-            return new RedirectResponse($this->router->generate('admin_dashboard'));
+        if (!$user || !$agent) {
+            $this->addFlash($errorTitle, 'User or agent not found.');
+            return new RedirectResponse($this->generateUrl('admin_dashboard'));
         }
+
+        if ($agent->getRole() === 'USER') {
+            $this->addFlash($errorTitle, 'User can’t be in charge of an agent or other user.');
+            return new RedirectResponse($this->generateUrl('admin_dashboard'));
+        }
+
+        $a = $agent;
+        while ($a !== null) {
+            if ($a->getId() === $user->getId()) {
+                $this->addFlash($errorTitle, 'Assignment denied: circular agent relationship detected.');
+                return new RedirectResponse($this->generateUrl('admin_dashboard'));
+            }
+            $a = $a->getAgent();
+        }
+
+        $user->setAgent($agent);
+        $this->getDoctrine()->getManager()->flush();
         
-        if (!$agent) {
-            $this->addFlash($errorTitle, 'Agent not found!');
-            return new RedirectResponse($this->router->generate('admin_dashboard'));
-        }
-
-        if ($user && $agent) {
-            $user->setAgent($agent);
-            $this->getDoctrine()->getManager()->flush();
-            $this->addFlash($successTitle, "Agent [ID: {$agent->getId()}] was successfully assigned to user {$user->getUsername()} [ID: {$user->getId()}].");
-        } else {
-            $this->addFlash($errorTitle, 'Error assigning agent!  One of the users not found.');
-        }
-
-        return new RedirectResponse($this->router->generate('admin_dashboard'));
+        $this->addFlash($successTitle, "Agent [ID: {$agent->getId()}] was successfully assigned to user {$user->getUsername()} [ID: {$user->getId()}].");
+       
+        return new RedirectResponse($this->generateUrl('admin_dashboard'));
     }
 }

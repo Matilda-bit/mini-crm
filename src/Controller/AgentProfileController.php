@@ -116,30 +116,37 @@ class AgentProfileController extends AbstractController
         
         $userId = $request->request->get('user_id');
         $agentId = $request->request->get('agent_id');
-        $user = $this->getDoctrine()->getRepository(User::class)->find($userId);
-        $agent = $this->getDoctrine()->getRepository(User::class)->find($agentId);
+
+        $userRepo = $this->getDoctrine()->getRepository(User::class);
+        $user = $userRepo->find($userId);
+        $agent = $userRepo->find($agentId);
+        
         $isUser = $user->getRole() === 'USER';
         $errorTitle = $isUser ? 'users_tb_error' : 'agent_tb_error';
         $successTitle = $isUser ? 'users_tb_success' : 'agents_tb_success';
         
-        if (!$user) {
-            $this->addFlash($errorTitle, 'User not found!');
-            return $this->redirectToRoute('agent_dashboard');
+        if (!$user || !$agent) {
+            $this->addFlash($errorTitle, 'User or agent not found.');
+            return new RedirectResponse($this->generateUrl('admin_dashboard'));
+        }
+        if ($agent->getRole() === 'USER') {
+            $this->addFlash($errorTitle, 'User can’t be in charge of an agent or other user.');
+            return new RedirectResponse($this->generateUrl('admin_dashboard'));
+        }
+
+        $a = $agent;
+        while ($a !== null) {
+            if ($a->getId() === $user->getId()) {
+                $this->addFlash($errorTitle, 'Assignment denied: circular agent relationship detected.');
+                return new RedirectResponse($this->generateUrl('admin_dashboard'));
+            }
+            $a = $a->getAgent();
         }
         
-        if (!$agent) {
-            $this->addFlash($errorTitle, 'Agent not found!');
-            return $this->redirectToRoute('agent_dashboard');
-        }
+        $user->setAgent($agent);
+        $this->getDoctrine()->getManager()->flush();
 
-        if ($user && $agent) {
-            $user->setAgent($agent);
-            $this->getDoctrine()->getManager()->flush();
-            $this->addFlash($successTitle, "Agent [ID: {$agent->getId()}] was successfully assigned to user {$user->getUsername()} [ID: {$user->getId()}].");
-
-        } else {
-            $this->addFlash($errorTitle, 'Error assigning agent!  One of the users not found.');
-        }
+        $this->addFlash($successTitle, "Agent [ID: {$agent->getId()}] was successfully assigned to user {$user->getUsername()} [ID: {$user->getId()}].");
 
         return $this->redirectToRoute('agent_dashboard');
     }
