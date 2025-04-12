@@ -128,11 +128,9 @@ class AdminProfileController extends AbstractController
     #[Route('/admin/assign-agent', name: 'admin_assign_agent', methods: ['POST'])]
     public function assignAgent(Request $request, UserInterface $currentUser): RedirectResponse
     {
-        //must-have - check role of current user
-        $allowedRoles = ['ADMIN'];
-        if (!in_array($currentUser->getRole(), $allowedRoles)) {
-            throw new AccessDeniedException('You do not have permission to assign agents.');
-        }
+        //must-have - check role of current user \/
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
         
         $userId = $request->request->get('user_id');
         $agentId = $request->request->get('agent_id');
@@ -140,28 +138,40 @@ class AdminProfileController extends AbstractController
         $userRepo = $this->getDoctrine()->getRepository(User::class);
         $user = $userRepo->find($userId);
         $agent = $userRepo->find($agentId);
+        $redirect = new RedirectResponse($this->generateUrl('admin_dashboard'));
+
+        
+        if (!$user || !$agent) {
+            $this->addFlash($errorTitle, 'User or agent not found.');
+            return $redirect;
+        }
 
         $isUser = $user->getRole() === 'USER';
         $errorTitle = $isUser ? 'users_tb_error' : 'agent_tb_error';
         $successTitle = $isUser ? 'users_tb_success' : 'agents_tb_success';
-        
-        if (!$user || !$agent) {
-            $this->addFlash($errorTitle, 'User or agent not found.');
-            return new RedirectResponse($this->generateUrl('admin_dashboard'));
-        }
 
         if ($agent->getRole() === 'USER') {
             $this->addFlash($errorTitle, 'User can’t be in charge of an agent or other user.');
-            return new RedirectResponse($this->generateUrl('admin_dashboard'));
+            return $redirect;
         }
 
         $a = $agent;
         while ($a !== null) {
             if ($a->getId() === $user->getId()) {
                 $this->addFlash($errorTitle, 'Assignment denied: circular agent relationship detected.');
-                return new RedirectResponse($this->generateUrl('admin_dashboard'));
+                return $redirect;
             }
             $a = $a->getAgent();
+        }
+
+        // Check if agent is a subordinate of the user
+        list($userSubs, $agentSubs) = $this->getAllSubordinates($user);
+        $allSubs = array_merge($userSubs, $agentSubs);
+        foreach ($allSubs as $sub) {
+            if ($sub->getId() === $agent->getId()) {
+                $this->addFlash($errorTitle, 'Assignment denied: agent is a subordinate of the user.');
+                return $redirect;
+            }
         }
 
         $user->setAgent($agent);
@@ -169,6 +179,8 @@ class AdminProfileController extends AbstractController
         
         $this->addFlash($successTitle, "Agent [ID: {$agent->getId()}] was successfully assigned to user {$user->getUsername()} [ID: {$user->getId()}].");
        
-        return new RedirectResponse($this->generateUrl('admin_dashboard'));
+        return $redirect;
     }
+
+
 }
