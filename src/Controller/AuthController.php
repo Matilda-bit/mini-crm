@@ -46,10 +46,13 @@ class AuthController extends AbstractController
         $form = $this->createForm(RegistrationFormType::class, $user);
         $form->handleRequest($request);
 
+        $errorTitle = 'login_error';
+        $successTitle = 'login_success' ;
+
         if ($form->isSubmitted() && $form->isValid()) {
             // Проверяем, существует ли уже такой пользователь
             if ($userRepository->findOneBy(['username' => $user->getUsername()])) {
-                $this->addFlash('error', 'Username already exists.');
+                $this->addFlash($errorTitle, 'Username already exists.');
                 return $this->redirectToRoute('app_login_register');
             }
 
@@ -84,7 +87,7 @@ class AuthController extends AbstractController
             $em->flush();
 
 
-            $this->addFlash('success', 'Registration successful! You can now log in.');
+            $this->addFlash($successTitle, 'Registration successful! You can now log in.');
             $this->loginAfterRegistration($request,$user);
 
             return $this->redirectToDashboard();
@@ -125,7 +128,7 @@ class AuthController extends AbstractController
     private function redirectToDashboard(): Response
     {
         $user = $this->getUser();
-        
+
         if (!$user) {
             return $this->redirectToRoute('app_login_register'); // или что-то другое
         }
@@ -154,10 +157,8 @@ class AuthController extends AbstractController
         $user = new User();
         $form = $this->createForm(RegistrationFormType::class, $user);
     
-        // Process the form submission (if needed)
         $form->handleRequest($request);
     
-        // Render the template with the form view
         return $this->render('auth/index.html.twig', [
             'registrationForm' => $form->createView(),
         ]);
