@@ -50,10 +50,7 @@ class User implements UserInterface
     // Symfony Security Methods
     public function getRoles(): array
     {
-        $roles = [$this->role];
-        $roles[] = 'ROLE_' . strtoupper($this->role);
-    
-        return array_unique($roles);
+        return ['ROLE_' . strtoupper($this->role)];
     }
 
     public function eraseCredentials(): void

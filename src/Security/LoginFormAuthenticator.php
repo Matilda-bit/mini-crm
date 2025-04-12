@@ -57,25 +57,30 @@ class LoginFormAuthenticator extends AbstractLoginFormAuthenticator
 
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): Response
     {
+        $role = $token->getUser()->getRoles()[0];
+        $routeMap = [
+            'ROLE_ADMIN' => 'admin_dashboard',
+            'ROLE_REP' => 'agent_dashboard',
+            'ROLE_USER' => 'user_dashboard',
+        ];
+        // dd('успешный вход');
+
+        if (!$request->getSession()) {
+            throw new \LogicException('Session is not available.');
+        }
+    
         // Перенаправление на сохраненную страницу или на дашборд
         $targetPath = $this->getTargetPath($request->getSession(), $firewallName);
+        // dd($targetPath);
+        // if ($targetPath) {
+        //     return new RedirectResponse($targetPath);
+        // }
+        // dd($targetPath);
+   
 
-        if ($targetPath) {
-            return new RedirectResponse($targetPath);
-        }
 
-        /** @var User $user */
-        $user = $token->getUser();
-        $role = $user->getRole();
 
-        if ($role === 'REP') {
-            return new RedirectResponse($this->router->generate('agent_dashboard'));
-        }
-        if ($role === 'ADMIN') {
-            return new RedirectResponse($this->router->generate('admin_dashboard'));
-        }
-
-        return new RedirectResponse($this->router->generate('user_dashboard'));
+        return new RedirectResponse($this->router->generate($routeMap[$role] ?? 'user_dashboard'));
     }
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): Response
