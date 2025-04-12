@@ -1,12 +1,9 @@
 {# templates/dashboard/manage_users.html.twig #}
 
-{% for message in app.flashes('error') %}
-    <div style="color: red">{{ message }}</div>
-{% endfor %}
-{% for message in app.flashes('success') %}
-    <div style="color: green">{{ message }}</div>
-{% endfor %}
-
+{% include 'components/flash_messages.html.twig' with {
+    'error': 'users_tb_error',
+    'success': 'users_tb_success'
+} %}
 <h2>Manage Users</h2>
 
 {% if users is not empty %}
@@ -49,10 +46,10 @@
                     {% endif %}
                 </td>
                 <td>
-                    <form method="POST" action="{{ path('assign_agent', {'userId': user.id}) }}">
+                    <form method="POST" action="{{ path(route ~ '_assign_agent', {'userId': user.id}) }}">
                         <select name="agent_id" class="form-control">
                             {% for agent in agents %}
-                                <option value="{{ agent.id }}" {% if agent.id == u.agent.id %}selected{% endif %}>{{ agent.username }}</option>
+                                <option value="{{ agent.id }}" {% if u.agent and agent.id == u.agent.id %}selected{% endif %}>{{ agent.username }} ({{ agent.id }})</option>
                             {% endfor %}
                         </select>
                         <input type="hidden" name="user_id" value="{{ u.id }}">
