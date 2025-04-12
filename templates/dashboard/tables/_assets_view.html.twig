@@ -86,13 +86,18 @@
             }
         };
     });
+    const assetsMap = new Map();
 
     function updateAssetsTable(data) {
         if (!dataTable) return;
 
+        data.forEach(asset => {
+            assetsMap.set(asset.asset_name, asset);
+        });
+
         dataTable.clear();
 
-        data.forEach(asset => {
+        assetsMap.forEach(asset => {
             dataTable.row.add([
                 asset.asset_name || '',
                 asset.bid || '',

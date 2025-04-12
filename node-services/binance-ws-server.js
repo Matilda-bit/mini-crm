@@ -5,6 +5,11 @@ const mysql = require('mysql2');
 const path = require('path');
 require('dotenv').config();
 
+
+//"BTCUSDT" - works
+//"BTCEUR"
+//"EURBUSD"
+//"TUSDBTC"
 // --- Настройки ---
 const PORT = 8080;
 const SEND_INTERVAL_MS = 1000;
@@ -27,8 +32,9 @@ const db = mysql.createConnection({
 });
 
 // --- Подключение к Binance WebSocket ---
-const binanceWS = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@bookTicker');
-
+const binanceWS = new WebSocket(
+    'wss://stream.binance.com:9443/stream?streams=btcusdt@bookTicker/btceur@bookTicker/eurbusd@bookTicker/tusdbtc@bookTicker'
+  );
 let lastFrontendSendTime = 0;
 let logCount = 0;
 
@@ -60,19 +66,20 @@ binanceWS.on('open', () => {
 });
 
 binanceWS.on('message', (data) => {
-    const ticker = JSON.parse(data);
+    const parsed = JSON.parse(data);
+    const ticker = parsed.data;
+    const symbol = ticker.s;
+
+    const assetName = symbol.slice(0, 3) + '/' + symbol.slice(3);
     const now = new Date();
 
     const transformed = {
-        asset_name: 'BTC/USD',
+        asset_name: assetName,
         bid: parseFloat(ticker.b),
         ask: parseFloat(ticker.a),
         lot_size: parseFloat(ticker.A),
         date_update: now
     };
-
-    //   const assetName = symbol.substring(0, 3) + '/' + symbol.substring(3);
-    //   console.log(ticker);
 
     // --- Запись в БД ---
     const sql = `
