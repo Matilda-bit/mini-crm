@@ -28,7 +28,7 @@ class AgentProfileController extends AbstractController
     #[Route('/agent/dashboard', name: 'agent_dashboard', methods: ['GET'])]
     public function index(UserInterface $user)
     {
-        if (!in_array('REP', $user->getRoles())) {
+        if ($user->getRole() !== 'REP') {
             throw new AccessDeniedException('Access Denied. [AgentProfileController]');
         }
     
@@ -124,12 +124,12 @@ class AgentProfileController extends AbstractController
         
         if (!$user) {
             $this->addFlash($errorTitle, 'User not found!');
-            return $this->redirectToRoute('admin_dashboard');
+            return $this->redirectToRoute('agent_dashboard');
         }
         
         if (!$agent) {
             $this->addFlash($errorTitle, 'Agent not found!');
-            return $this->redirectToRoute('admin_dashboard');
+            return $this->redirectToRoute('agent_dashboard');
         }
 
         if ($user && $agent) {
@@ -141,7 +141,7 @@ class AgentProfileController extends AbstractController
             $this->addFlash($errorTitle, 'Error assigning agent!  One of the users not found.');
         }
 
-        return $this->redirectToRoute('admin_dashboard');
+        return $this->redirectToRoute('agent_dashboard');
     }
 
     #[Route('/open-trade', name: 'open_trade', methods: ['POST'])]
@@ -173,6 +173,7 @@ class AgentProfileController extends AbstractController
 
         $trade = new Trade();
         $trade->setUser($targetUser);
+        $trade->setAgentId($user);
         $trade->setPosition($position);
         $trade->setLotCount($lotCount);
         $trade->setStopLoss($sl ?: null);

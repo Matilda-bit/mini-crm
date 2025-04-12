@@ -11,6 +11,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
@@ -79,9 +80,7 @@ class AuthController extends AbstractController
                 }
                 // return;
             }
-            
-            // Отладка: выводим объект перед сохранением
-            dump($user);  // Symfony Debugging tool
+
 
             $em->persist($user);
             $em->flush();
@@ -108,47 +107,29 @@ class AuthController extends AbstractController
         );
     }
 
-   #[Route('/login', name: 'app_login', methods: ['POST'])]
+    #[Route('/login', name: 'app_login', methods: ['POST'])]
     public function login(
         Request $request,
         AuthenticationUtils $authenticationUtils
     ): Response {
         $error = $authenticationUtils->getLastAuthenticationError();
         $lastUsername = $authenticationUtils->getLastUsername();
-
+    
         if ($error) {
             $this->addFlash('error', 'Invalid credentials.');
             return $this->redirectToRoute('app_login_register');
         }
-
+    
         return $this->redirectToDashboard();
     }
 
-    //to check - not in use???
-    private function redirectToDashboard(): Response
-    {
-        $user = $this->getUser();
-
-        if (!$user) {
-            return $this->redirectToRoute('app_login_register'); // или что-то другое
-        }
-
-        $role = $user->getRole();
-
-        if ($role === 'REP') {
-            return $this->redirectToRoute('agent_dashboard');
-        }
-        if ($role === 'ADMIN') {
-            return $this->redirectToRoute('admin_dashboard');
-        }
-
-        return $this->redirectToRoute('user_dashboard');
-    }
 
     #[Route('/logout', name: 'app_logout')]
     public function logout(): void
     {
         // This method can be blank - it will be intercepted by Symfony logout system
+        // Symfony перехватит этот маршрут, метод останется пустым
+        throw new \Exception('Этот метод может быть пустым – Symfony перехватывает logout автоматически.');
     }
 
     #[Route('/', name: 'app_login_register')]

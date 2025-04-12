@@ -21,8 +21,7 @@ class AdminProfileController extends AbstractController
     public function index(UserInterface $user): Response
     {
 
-        $allowedRoles = ['ADMIN'];
-        if (!in_array($user->getRole(), $allowedRoles)) {
+        if ($user->getRole()!== 'ADMIN') {
             throw new AccessDeniedException('Access Denied. [AdminProfileController]');
         }
 
@@ -134,12 +133,12 @@ class AdminProfileController extends AbstractController
         
         if (!$user) {
             $this->addFlash($errorTitle, 'User not found!');
-            return $this->redirectToRoute('admin_dashboard');
+            return new RedirectResponse($this->router->generate('admin_dashboard'));
         }
         
         if (!$agent) {
             $this->addFlash($errorTitle, 'Agent not found!');
-            return $this->redirectToRoute('admin_dashboard');
+            return new RedirectResponse($this->router->generate('admin_dashboard'));
         }
 
         if ($user && $agent) {
@@ -150,6 +149,6 @@ class AdminProfileController extends AbstractController
             $this->addFlash($errorTitle, 'Error assigning agent!  One of the users not found.');
         }
 
-        return $this->redirectToRoute('admin_dashboard');
+        return new RedirectResponse($this->router->generate('admin_dashboard'));
     }
 }

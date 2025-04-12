@@ -42,23 +42,4 @@ class ProfileController extends AbstractController
         ]);
     }
 
-    #[Route('/open-trade', name: 'open_trade', methods: ['POST'])]
-    public function openTrade(Request $request, UserInterface $user)
-    {
-        // Логика открытия сделки
-        // Получаем данные из формы и сохраняем сделку в базу данных
-        
-        return $this->redirectToRoute('profile');
-    }
-
-    #[Route('/close-trade/{id}', name: 'close_trade', methods: ['POST'])]
-    public function closeTrade(int $id)
-    {
-        // Логика закрытия сделки
-        $trade = $this->getDoctrine()->getRepository(Trade::class)->find($id);
-        $trade->setStatus('closed');
-        $this->getDoctrine()->getManager()->flush();
-
-        return $this->redirectToRoute('profile');
-    }
 }
