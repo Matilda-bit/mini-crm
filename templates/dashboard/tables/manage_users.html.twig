@@ -4,7 +4,13 @@
     'error': 'users_tb_error',
     'success': 'users_tb_success'
 } %}
-<h2>Manage Users</h2>
+<h2>
+    {% if 'admin' in route %}
+        Manage Users
+    {% else %}
+        Users / Agents
+    {% endif %}
+</h2>
 
 {% if users is not empty %}
 
@@ -42,19 +48,29 @@
                     {% if u.agent %}
                         {{ u.agent.id }}
                     {% else %}
-                        NAN
+                        <span style="color: red;">N/A</span>
                     {% endif %}
                 </td>
                 <td>
-                    <form method="POST" action="{{ path(route ~ '_assign_agent', {'userId': user.id}) }}">
-                        <select name="agent_id" class="form-control">
-                            {% for agent in agents %}
-                                <option value="{{ agent.id }}" {% if u.agent and agent.id == u.agent.id %}selected{% endif %}>{{ agent.username }} ({{ agent.id }})</option>
-                            {% endfor %}
-                        </select>
-                        <input type="hidden" name="user_id" value="{{ u.id }}">
-                        <button type="submit">Assign</button>
-                    </form>
+                    {% if 'admin' in route %}
+                        <form method="POST" action="{{ path(route ~ '_assign_agent', {'userId': user.id}) }}">
+                            <select name="agent_id" class="form-control">
+                                {% for agent in agents %}
+                                    <option value="{{ agent.id }}" {% if u.agent and agent.id == u.agent.id %}selected{% endif %}>
+                                        {{ agent.username }} ({{ agent.id }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <input type="hidden" name="user_id" value="{{ u.id }}">
+                            <button type="submit">Assign</button>
+                        </form>
+                    {% else %}
+                        {% if u.agent %}
+                            {{ u.agent.username }}
+                        {% else %}
+                            No Agent
+                        {% endif %}
+                    {% endif %}
                 </td>
             </tr>
         {% endfor %}
