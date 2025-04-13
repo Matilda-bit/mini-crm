@@ -1,22 +1,15 @@
-{# templates/dashboard/agent.html.twig #}
+{# templates/dashboard/agent/agent.html.twig #}
 
 {% extends 'base.html.twig' %}
 {% block content %}
 
-    <h1>Welcome {{ user.username }}</h1>
-    <h3>This is Agent dashboard, and using: {{ controller_name }}</h3>
+    {% include 'dashboard/user_info.html.twig' with {'user': user} %}
 
-    <p><strong>My ID:</strong> {{ user.id }}</p>
-    <p><strong>Agent ID:</strong> {{ user.agent ? user.agent.id : 'NaN' }}</p>
-    <p><strong>Last Login:</strong> {{ user.loginTime ? user.loginTime|date('Y-m-d H:i:s') : 'Never' }}</p>
-    <p><strong>Role:</strong> {{ user.role }}</p>
-    <p><strong>Currency:</strong> {{ user.currency }}</p>
-    <p><strong>Total PNL:</strong> {{ user.totalPnl }}</p>
-    <p><strong>Equity:</strong> {{ user.equity }}</p>
+    {% include 'dashboard/agent/hierarchy_view.html.twig' with {'rep': rep, 'isRoot': false} %}
 
     {% include 'dashboard/tables/manage_users.html.twig' with {'users': users, 'agents': agents, 'route': 'rep'} %}
     {% include 'dashboard/tables/manage_agents.html.twig' with {'agents': agents, 'route': 'rep'} %}
-    {% include 'dashboard/trade/_trade_table.html.twig' with {'trades': trades} %}
-    {% include 'dashboard/trade/_trade_form.html.twig' with {'users': users} %}
+    {% include 'dashboard/trade/_trade_table.html.twig' with {'trades': trades, 'role': user.role} %}
+    {% include 'dashboard/trade/_trade_form.html.twig' with {'users': users, 'is_agent': true} %}
     {% include 'dashboard/tables/_assets_view.html.twig' %}
 {% endblock %}
