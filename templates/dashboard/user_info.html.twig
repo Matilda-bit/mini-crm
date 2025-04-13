@@ -1,0 +1,113 @@
+{# templates/dashboard/user_info.html.twig #}
+
+<div class="user-info-container">
+    <h1>Welcome, <span class="username">{{ user.username }}</span>!</h1>
+    <h3 class="dashboard-title">
+        This is {{ user.role == 'ADMIN' ? 'Admin' : 'Agent' }} dashboard, and using: <em>{{ controller_name }}</em>
+    </h3>
+
+    <div class="info-card">
+        <div class="info-row">
+            <span class="info-label">ID:</span>
+            <span class="info-value">{{ user.id }}</span>
+        </div>
+
+        <div class="info-row">
+            <span class="info-label">Role:</span>
+            <span class="info-value">{{ user.role }}</span>
+        </div>
+
+        {% if user.role == 'REP' %}
+            <div class="info-row">
+                <span class="info-label">Assigned Agent:</span>
+                <span class="info-value">
+                    {{ user.agent ? user.agent.username ~ ' [ id: ' ~ user.agent.id ~ ' ]' : 'NaN' }}
+                </span>
+            </div>
+        {% endif %}
+
+        <div class="info-row">
+            <span class="info-label">Last Login:</span>
+            <span class="info-value">{{ user.loginTime ? user.loginTime|date('Y-m-d H:i:s') : 'Never' }}</span>
+        </div>
+
+        <hr class="info-separator"/>
+
+        <div class="info-row">
+            <span class="info-label">Currency:</span>
+            <span class="info-value">{{ user.currency }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Total PNL:</span>
+            <span class="info-value {{ user.totalPnl < 0 ? 'negative' : 'positive' }}">{{ user.totalPnl }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Equity:</span>
+            <span class="info-value">{{ user.equity }}</span>
+        </div>
+    </div>
+</div>
+
+<style>
+    .user-info-container {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .username {
+        color:#a037c7;
+        font-weight: bold;
+    }
+
+    .dashboard-title {
+        font-size: 18px;
+        color: #555;
+    }
+
+    .info-card {
+        justify-content: center;
+        background-color: #f9f9f9;
+        padding: 20px;
+        margin-top: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+
+    .info-label {
+        font-weight: bold;
+        color: #333;
+    }
+
+    .info-value {
+        color: #666;
+    }
+
+    .info-value.positive {
+        color: #28a745;
+    }
+
+    .info-value.negative {
+        color: #dc3545;
+    }
+
+    .info-row:last-child {
+        margin-bottom: 0;
+    }
+
+    .info-separator {
+        border: none;
+        border-top: 1px solid #ddd;
+        margin: 15px 0;
+    }
+</style>
