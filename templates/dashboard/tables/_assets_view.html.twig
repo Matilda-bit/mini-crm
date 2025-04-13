@@ -5,10 +5,8 @@
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
 <h2>Assets</h2>
-<!-- <button id="viewAssetsButton">View Assets</button> -->
 
 <div id="assetsContainer">
-    <!-- <h3>Assets List</h3> -->
     <table id="assetsTable">
         <thead>
             <tr>
@@ -37,28 +35,23 @@
             ]
         });
 
-        // viewBtn.addEventListener('click', () => {
-        //     const isHidden = assetsContainer.style.display === 'none';
-        //     assetsContainer.style.display = isHidden ? 'block' : 'none';
-        // });
+        const socket = new WebSocket('wss://127.0.0.1:8080');
 
-        const ws = new WebSocket('wss://127.0.0.1:8080');
-
-        ws.onopen = () => {
+        socket.onopen = () => {
             console.log('WebSocket connection established');
         };
 
-        ws.onerror = error => {
+        socket.onerror = error => {
             console.error('WebSocket Error:', error);
         };
 
-        ws.onclose = () => {
+        socket.onclose = () => {
             console.log('WebSocket connection closed');
         };
 
         let logCount = 0;
 
-        ws.onmessage = (event) => {
+        socket.onmessage = (event) => {
             let data;
 
             try {
@@ -92,7 +85,14 @@
         if (!dataTable) return;
 
         data.forEach(asset => {
-            assetsMap.set(asset.asset_name, asset);
+            if (assetsMap.has(asset.asset_name)) {
+                const existingAsset = assetsMap.get(asset.asset_name);
+                existingAsset.bid = asset.bid;
+                existingAsset.ask = asset.ask;
+                existingAsset.lot_size = asset.lot_size;
+            } else {
+                assetsMap.set(asset.asset_name, asset);
+            }
         });
 
         dataTable.clear();
