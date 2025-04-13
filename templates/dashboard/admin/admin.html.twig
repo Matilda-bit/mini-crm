@@ -5,7 +5,7 @@
 
     {% include 'dashboard/user_info.html.twig' with {'user': user} %}
 
-
+    {% include 'dashboard/agent/hierarchy_view.html.twig' with {'rep': rep, 'isRoot': true} %}
     {% include 'dashboard/tables/manage_users.html.twig' with {'users': users, 'agents': agents, 'route': 'admin'} %}
     {% include 'dashboard/tables/manage_agents.html.twig' with {'agents': agents, 'route': 'admin'} %}
     {% include 'dashboard/trade/_trade_table.html.twig' with {'trades': trades,'role': user.role} %}
