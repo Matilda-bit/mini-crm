@@ -37,6 +37,7 @@ const binanceWS = new WebSocket(
   );
 let lastFrontendSendTime = 0;
 let logCount = 0;
+const latestAssets = {};
 
 // --- Обработка подключения фронтов ---
 wss.on('connection', (ws) => {
@@ -68,8 +69,7 @@ binanceWS.on('open', () => {
 binanceWS.on('message', (data) => {
     const parsed = JSON.parse(data);
     const ticker = parsed.data;
-    const symbol = ticker.s;
-
+    const symbol = ticker.s.slice(0, 6);
     const assetName = symbol.slice(0, 3) + '/' + symbol.slice(3);
     const now = new Date();
 
@@ -80,6 +80,8 @@ binanceWS.on('message', (data) => {
         lot_size: parseFloat(ticker.A),
         date_update: now
     };
+
+    latestAssets[assetName] = transformed;
 
     // --- Запись в БД ---
     const sql = `
@@ -105,6 +107,7 @@ binanceWS.on('message', (data) => {
     // --- Отправка на фронт ---
     const nowMs = Date.now();
     if (nowMs - lastFrontendSendTime > SEND_INTERVAL_MS) {
+        const payload = Object.values(latestAssets);
         broadcastToFrontend(transformed);
         lastFrontendSendTime = nowMs;
 
