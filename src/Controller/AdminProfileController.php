@@ -11,12 +11,19 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
-
 use Symfony\Component\VarDumper\VarDumper;
+use App\Service\LoggerService;
 
 #[IsGranted('ROLE_ADMIN')]
 class AdminProfileController extends AbstractController
 {
+
+    public function __construct(
+        LoggerService $loggerService
+    ) {
+        $this->loggerService = $loggerService;
+    }
+
     #[Route('/admin/dashboard', name: 'admin_dashboard', methods: ['GET'])]
     public function index(UserInterface $user): Response
     {
@@ -25,8 +32,9 @@ class AdminProfileController extends AbstractController
             throw new AccessDeniedException('Access Denied. [AdminProfileController]');
         }
 
-        list($users, $agents) = $this->getAllSubordinates($user);
+        list($users, $agents) = $this->getAllSubordinates($user, true);
         $trades = $this->getAllTradesForUserAndSubordinates($user, $users);
+        $repHierarchy = $this->buildHierarchyTree($user);
 
         // dd(['AGENTS1' => $agents, 'USERS1' => $users]);
 
@@ -36,10 +44,57 @@ class AdminProfileController extends AbstractController
             'trades' => $trades,
             'users' => $users,
             'agents' => $agents,
+            'rep' => $repHierarchy,
         ]);
     }
 
-    private function getAllSubordinates(UserInterface $user): array
+    private function buildHierarchyTree(UserInterface $user): array
+    {
+        $userRepository = $this->getDoctrine()->getRepository(User::class);
+        $allUsers = $userRepository->findAll();
+    
+        $map = [];
+        $nodes = [];
+        foreach ($allUsers as $u) {
+            $nodes[$u->getId()] = [
+                'user' => [
+                    'id' => $u->getId(),
+                    'username' => $u->getUsername(),
+                    'role' => $u->getRole()
+                ],
+                'children' => []
+            ];
+            if ($u->getAgent()) {
+                $map[$u->getAgent()->getId()][] = $u->getId(); // связь id → id
+            }
+        }
+    
+        $visited = [];
+    
+        $buildTree = function ($id) use (&$buildTree, &$map, &$nodes, &$visited) {
+            if (in_array($id, $visited, true)) {
+                return null;
+            }
+            $visited[] = $id;
+    
+            $node = $nodes[$id];
+            $childrenIds = $map[$id] ?? [];
+    
+            foreach ($childrenIds as $childId) {
+                $childNode = $buildTree($childId);
+                if ($childNode) {
+                    $node['children'][] = $childNode;
+                }
+            }
+    
+            return $node;
+        };
+    
+        return [$buildTree($user->getId())]; // возвращаем массив с корнем
+    }
+
+
+    private function getAllSubordinates(UserInterface $user, bool $withNull): array
     {
     
         $userRepository = $this->getDoctrine()->getRepository(User::class);
@@ -90,12 +145,13 @@ class AdminProfileController extends AbstractController
                 }
             }
         }
-    
-        foreach ($orphans as $u) {
-            if ($u->getRole() === 'REP' && !in_array($u, $agents, true)) {
-                $agents[] = $u;
-            } elseif ($u->getRole() === 'USER' && !in_array($u, $users, true)) {
-                $users[] = $u;
+        if($withNull){
+            foreach ($orphans as $u) {
+                if ($u->getRole() === 'REP' && !in_array($u, $agents, true)) {
+                    $agents[] = $u;
+                } elseif ($u->getRole() === 'USER' && !in_array($u, $users, true)) {
+                    $users[] = $u;
+                }
             }
         }
     
@@ -164,21 +220,26 @@ class AdminProfileController extends AbstractController
             $a = $a->getAgent();
         }
 
-        // Check if agent is a subordinate of the user
-        list($userSubs, $agentSubs) = $this->getAllSubordinates($user);
-        $allSubs = array_merge($userSubs, $agentSubs);
-        foreach ($allSubs as $sub) {
-            if ($sub->getId() === $agent->getId()) {
-                $this->addFlash($errorTitle, 'Assignment denied: agent is a subordinate of the user.');
-                return $redirect;
+        if($user->getAgent() && $user->getRole !== 'USER'){
+            // Check if agent is a subordinate of the user
+            list($userSubs, $agentSubs) = $this->getAllSubordinates($user, false);
+            $allSubs = array_merge($userSubs, $agentSubs);
+            foreach ($allSubs as $sub) {
+                if ($sub->getId() === $agent->getId()) {
+                    $this->addFlash($errorTitle, 'Assignment denied: agent is a subordinate of the user.');
+                    return $redirect;
+                }
             }
         }
-
+        
         $user->setAgent($agent);
         $this->getDoctrine()->getManager()->flush();
         
         $this->addFlash($successTitle, "Agent [ID: {$agent->getId()}] was successfully assigned to user {$user->getUsername()} [ID: {$user->getId()}].");
-       
+        $this->loggerService->logAction(
+            $currentUser->getId(),
+            sprintf('Assigned agent ID %d to user ID %d', $agent->getId(), $user->getId())
+        );
         return $redirect;
     }
 
