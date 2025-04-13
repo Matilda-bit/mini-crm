@@ -1,0 +1,64 @@
+{# templates/dashboard/agent/hierarchy_view.html.twig #}
+
+{% block content %}
+    <h2 style="text-align: center;">My Hierarchy</h2>
+
+    <div style="text-align: center; margin-bottom: 10px;">
+        <button id="toggleHierarchy" class="hierarchy-toggle-btn">Show Hierarchy</button>
+    </div>
+
+    <pre id="hierarchyBlock" style="display: none;">
+        {% import _self as macros %}
+
+        {{ macros.render(rep, '', true) }}
+    </pre>
+
+    <script>
+        document.getElementById('toggleHierarchy').addEventListener('click', function () {
+            const block = document.getElementById('hierarchyBlock');
+            const button = document.getElementById('toggleHierarchy');
+            if (block.style.display === 'none') {
+                block.style.display = 'block';
+                button.textContent = 'Hide Hierarchy';
+            } else {
+                block.style.display = 'none';
+                button.textContent = 'Show Hierarchy';
+            }
+        });
+    </script>
+    <style>
+        .hierarchy-toggle-btn {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .hierarchy-toggle-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+
+{% endblock %}
+
+{% macro render(nodes, prefix, isRoot) %}
+    {% import _self as self %}
+
+    {% for node in nodes %}
+        {% set connector = loop.last ? '└── ' : '├── ' %}
+        {% set user = node.user %}
+        {% set roleClass = user.role == 'REP' ? 'color: #a037c7;' : 'color: #d79230;' %}
+
+        {% set line = (isRoot ? '' : prefix ~ connector) ~ '[' ~ user.id ~ '] ' ~ user.username ~ ' (' ~ user.role ~ ')' %}
+        {{ line }}
+
+        {% if node.children is defined and node.children is not empty %}
+            {% set newPrefix = prefix ~ (loop.last ? '    ' : '│   ') %}
+            {{ self.render(node.children, newPrefix, false) }}
+        {% endif %}
+    {% endfor %}
+{% endmacro %}
