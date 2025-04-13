@@ -28,12 +28,10 @@ class AgentProfileController extends AbstractController
     #[Route('/agent/dashboard', name: 'agent_dashboard', methods: ['GET'])]
     public function index(UserInterface $user)
     {
-        if ($user->getRole() !== 'REP') {
-            throw new AccessDeniedException('Access Denied. [AgentProfileController]');
-        }
     
         list($users, $agents) = $this->filterUsersAndAgentsByHierarchy($user);
         $trades = $this->getAllTradesForUserAndSubordinates($user, $users);
+        $repHierarchy = $this->buildHierarchyTree($user);
             
         return $this->render('/dashboard/agent/agent.html.twig', [
             'controller_name' => 'AgentProfileController',
@@ -41,8 +39,56 @@ class AgentProfileController extends AbstractController
             'trades' => $trades, 
             'users' => $users,
             'agents' => $agents,
+            'rep' => $repHierarchy,
         ]);
     }
+
+
+    private function buildHierarchyTree(UserInterface $user): array
+    {
+        $userRepository = $this->getDoctrine()->getRepository(User::class);
+        $allUsers = $userRepository->findAll();
+    
+        $map = [];
+        $nodes = [];
+        foreach ($allUsers as $u) {
+            $nodes[$u->getId()] = [
+                'user' => [
+                    'id' => $u->getId(),
+                    'username' => $u->getUsername(),
+                    'role' => $u->getRole()
+                ],
+                'children' => []
+            ];
+            if ($u->getAgent()) {
+                $map[$u->getAgent()->getId()][] = $u->getId(); // связь id → id
+            }
+        }
+    
+        $visited = [];
+    
+        $buildTree = function ($id) use (&$buildTree, &$map, &$nodes, &$visited) {
+            if (in_array($id, $visited, true)) {
+                return null;
+            }
+            $visited[] = $id;
+    
+            $node = $nodes[$id];
+            $childrenIds = $map[$id] ?? [];
+    
+            foreach ($childrenIds as $childId) {
+                $childNode = $buildTree($childId);
+                if ($childNode) {
+                    $node['children'][] = $childNode;
+                }
+            }
+    
+            return $node;
+        };
+    
+        return [$buildTree($user->getId())]; // возвращаем массив с корнем
+    }
+
     //this function must be as a interface for Admins and Agents ? todo
     private function filterUsersAndAgentsByHierarchy(UserInterface $user): array
     {
@@ -154,39 +200,69 @@ class AgentProfileController extends AbstractController
     #[Route('/open-trade', name: 'open_trade', methods: ['POST'])]
     public function openTrade(Request $request, EntityManagerInterface $em, UserInterface $user): RedirectResponse
     {
+        $referer = $request->headers->get('referer');
         
         $targetUserId = $request->request->get('target_user'); 
         $position = $request->request->get('position');
         $lotCount = (float) $request->request->get('lot_count');
         $sl = $request->request->get('sl');
         $tp = $request->request->get('tp');
+        $assetName = $request->request->get('asset');
         $errorTitle = 'open_trade_error';
         $successTitle = 'open_trade_success';
 
         $targetUser = $em->getRepository(User::class)->find($targetUserId); 
-
         if (!$targetUser) {
-            throw $this->createNotFoundException('User not found');
+            $this->addFlash($errorTitle, 'User not found');
+            return $this->redirect($referer . '#open-trade');
         }
 
-        $asset = $em->getRepository(Asset::class)->findOneBy(['assetName' => 'BTC/USD']);
-        
+        $asset = $em->getRepository(Asset::class)->findOneBy(['assetName' => $assetName]);
         if (!$asset) {
             $this->addFlash($errorTitle, 'Asset not found');
-            return $this->redirect($request->headers->get('referer'));
+            return $this->redirect($referer . '#open-trade');
+        }
+
+        // Получение bid и ask
+        $bidRate = $asset->getBid();
+        $askRate = $asset->getAsk();
+        $entryRate = $position === 'buy' ? $askRate : $bidRate;
+
+        // Постоянные значения
+        $lotSize = 10;
+        $conversionRate = 0.9215; // USD → EUR (как в задании)
+        $userCurrency = $targetUser->getCurrency(); // Предположим, поле есть (например 'EUR' или 'USD')
+
+        // Вычисления
+        $tradeSize = $lotSize * $lotCount;
+        $isConvert = $assetName === 'BTC/USD' && $userCurrency === 'EUR';
+
+        // pipValue (в валюте пользователя)
+        $pipValue = $tradeSize * 0.01;
+        if ($isConvert) {
+            $pipValue *= $conversionRate;
+        }
+
+        // userMargin
+        $userMargin = $tradeSize * 0.1;
+        if ($isConvert) {
+            $userMargin *= $conversionRate;
         }
 
         $entryRate = $position === self::BUY ? $asset->getAsk() : $asset->getBid();
 
         $trade = new Trade();
         $trade->setUser($targetUser);
-        $trade->setAgentId($user);
-        $trade->setPosition($position);
+        $trade->setAgentId($user); // null если обычный пользователь, иначе — агент | opened_by_agent_id
+        $trade->setPosition($position);//buy or sell
         $trade->setLotCount($lotCount);
         $trade->setStopLoss($sl ?: null);
         $trade->setTakeProfit($tp ?: null);
         $trade->setStatus(self::STATUS_OPEN);
         $trade->setEntryRate($entryRate);
+        $trade->setTradeSize($tradeSize);
+        // $trade->setPipValue($pipValue); //can be calculate
+        $trade->setUsedMargin($userMargin);
         $trade->setDateCreated(new \DateTime());
 
         $em->persist($trade);
@@ -194,13 +270,14 @@ class AgentProfileController extends AbstractController
 
         $this->addFlash($successTitle, 'Trade successfully opened');
 
-        return $this->redirect($request->headers->get('referer'));
+        return $this->redirect($referer . '#open-trade');
     }
 
 
     #[Route('/close-trade/{id}', name: 'close_trade', methods: ['POST'])]
     public function closeTrade(int $id, Request $request, EntityManagerInterface $em)
     {
+        $referer = $request->headers->get('referer');
         $trade = $em->getRepository(Trade::class)->find($id);
     
         if (!$trade) {
@@ -221,7 +298,7 @@ class AgentProfileController extends AbstractController
         $userCurrency = $trade->getUser()->getCurrency();
         $margin = $trade->getTradeSize() * 0.1 * $currentRate;
     
-        $trade->setStatus(self::STATUS_CLOSED); 
+        $trade->setStatus(self::STATUS_CLOSED);
         $trade->setCloseRate($currentRate);
         $trade->setDateClose(new \DateTime());
         $trade->setPnl($pnl);
@@ -230,8 +307,8 @@ class AgentProfileController extends AbstractController
         $em->flush();
     
         $this->addFlash('close_trade_success', "Trade ID: [{$trade->getId()}] was successfully closed.");
-
-        return $this->redirect($request->headers->get('referer'));
+    
+        return $this->redirect($referer . '#tradesTable');
     }
     
 }
