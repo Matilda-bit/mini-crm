@@ -1,4 +1,4 @@
-{#  cmr/mini-crm/templates/base.html.twig #}
+{# cmr/mini-crm/templates/base.html.twig #}
 
 <!DOCTYPE html>
 <html lang="en">
@@ -9,11 +9,53 @@
 
     {% block stylesheets %}
         <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                background-color: #f4f4f4;
+            }
+
+            .logout-container {
+                display: flex;
+                justify-content: center;
+                margin-top: 30px;
+            }
+
+            .logout-button {
+                display: inline-block;
+                background-color: #dc3545;
+                color: #fff;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 5px;
+                text-decoration: none;
+                font-size: 16px;
+                transition: background-color 0.3s ease;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            }
+
+            .logout-button:hover {
+                background-color: #c82333;
+            }
+
+            #content {
+                max-width: 1000px;
+                margin: 40px auto;
+                padding: 20px;
+                background-color: #fff;
+                border-radius: 10px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            }
+        </style>
     {% endblock %}
 </head>
 <body>
 
-    <a href="{{ path('app_logout') }}">Logout</a>
+    <div class="logout-container">
+        <a href="{{ path('app_logout') }}" class="logout-button">Logout</a>
+    </div>
 
     <div id="content">
         {% block content %}{% endblock %}
