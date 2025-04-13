@@ -1,6 +1,6 @@
 {# templates/dashboard/trade/_trade_form.html.twig #}
 
-<h2>Open Trade for a User</h2>
+<h2 id="open-trade">Open Trade for a User</h2>
 
 
 {% include 'components/flash_messages.html.twig' with {
@@ -10,17 +10,50 @@
 
 <button id="toggleTradeForm">Open New Trade</button>
 
-
-<!-- Форма скрыта по умолчанию -->
 <div id="tradeFormContainer" style="display: none; margin-top: 20px;">
     <form action="/open-trade" method="POST">
-        <!-- Выбор пользователя -->
-        <label for="target_user">User:</label>
-        <select name="target_user" id="target_user" required>
-            {% for u in users %}
-                <option value="{{ u.id }}">{{ u.username }}</option>
-            {% endfor %}
+         <!-- Выбор пользователя (только для агента) -->
+        {% if is_agent %}
+            <label for="target_user">User:</label>
+            <select name="target_user" id="target_user" required>
+                {% for u in users %}
+                    <option value="{{ u.id }}">{{ u.username }}</option>
+                {% endfor %}
+            </select><br><br>
+        {% endif %}
+
+        <!-- Название актива -->
+        <label>Asset:</label>
+        <select name="asset" id="asset" required>
+            <option value="BTC/USD">BTC/USD</option>
+            <option value="BTC/EUR">BTC/EUR</option>
         </select><br><br>
+
+        <!-- Bid/Ask Rate (из WebSocket) -->
+        <label>Bid Rate:</label>
+        <span id="bidRate">--</span> <br>
+        <label>Ask Rate:</label>
+        <span id="askRate">--</span> <br><br>
+
+        <!-- Lot Count -->
+        <label for="lot_count">Lot Count:</label>
+        <input type="number" name="lot_count" id="lot_count" min="0.1" max="100" step="0.1" required><br><br>
+
+        <!-- Lot Size (неизменяемое значение) -->
+        <label>Lot Size:</label>
+        <input type="text" value="10" readonly><br><br>
+
+        <!-- Trade Size (автоматический расчет) -->
+        <label>Trade Size:</label>
+        <span id="tradeSize">--</span><br><br>
+
+        <!-- pipValue -->
+        <label>Pip Value:</label>
+        <span id="pipValue">--</span><br><br>
+
+        <!-- User Margin -->
+        <label>User Margin:</label>
+        <span id="userMargin">--</span><br><br>
 
         <!-- Выбор позиции -->
         <label for="position">Position:</label>
@@ -29,28 +62,70 @@
             <option value="sell">Sell</option>
         </select><br><br>
 
-        <!-- Количество лотов -->
-        <label for="lot_count">Lot Count:</label>
-        <input type="number" name="lot_count" id="lot_count" min="0.1" max="100" step="0.1" required><br><br>
 
+        <!-- SL / TP -->
+        
         <!-- Стоп-лосс -->
         <label for="sl">Stop Loss (SL):</label>
-        <input type="number" name="sl" id="sl"><br><br>
+        <input type="number" name="sl" id="sl" step="0.0001"><br><br>
 
         <!-- Тейк-профит -->
         <label for="tp">Take Profit (TP):</label>
-        <input type="number" name="tp" id="tp"><br><br>
+        <input type="number" name="tp" id="tp" step="0.0001"><br><br>
 
-        <!-- Кнопка отправки -->
+        <!-- Submit -->
         <button type="submit">Open Trade</button>
     </form>
 </div>
 
 <script>
-    $(document).ready(function() {
-        document.getElementById('toggleTradeForm').addEventListener('click', function() {
-            var formContainer = document.getElementById('tradeFormContainer');
-            formContainer.style.display = formContainer.style.display === 'none' ? 'block' : 'none';
-        });
+    document.getElementById('toggleTradeForm').addEventListener('click', () => {
+        const form = document.getElementById('tradeFormContainer');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
     });
+
+    let bid = 0;
+    let ask = 0;
+    const lotSize = 10;
+    const userCurrency = '{{ user.currency|default("EUR") }}';
+    const conversionRate = 0.9215; // USD to EUR ONLYYY!!!
+    const marketData = {};
+
+    const socket = new WebSocket('wss://127.0.0.1:8080');
+
+    socket.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        marketData[data.asset_name] = data;
+        updateRatesFromAsset(); 
+    };
+
+    document.getElementById('lot_count').addEventListener('input', calculateValues);
+    document.getElementById('position').addEventListener('change', calculateValues);
+    document.getElementById('asset').addEventListener('change', updateRatesFromAsset);
+
+    function updateRatesFromAsset() {
+        const selectedAsset = document.getElementById('asset').value;
+        const assetData = marketData[selectedAsset];
+
+        if (assetData) {
+            bid = assetData.bid;
+            ask = assetData.ask;
+            document.getElementById('bidRate').textContent = bid.toFixed(2);
+            document.getElementById('askRate').textContent = ask.toFixed(2);
+            calculateValues();
+        }
+    }
+
+    function calculateValues() {
+        const lotCount = parseFloat(document.getElementById('lot_count').value);
+        if (isNaN(lotCount)) return;
+
+        const tradeSize = lotSize * lotCount;
+        const pipValue = tradeSize * 0.01 * (userCurrency === 'USD' ? 1 : conversionRate);
+        const userMargin = tradeSize * 0.1 * (userCurrency === 'USD' ? 1 : conversionRate) * bid;
+
+        document.getElementById('tradeSize').textContent = `${tradeSize.toFixed(2)} ${userCurrency}`;
+        document.getElementById('pipValue').textContent = `${pipValue.toFixed(2)} ${userCurrency}`;
+        document.getElementById('userMargin').textContent = `${userMargin.toFixed(2)} ${userCurrency}`;
+    }
 </script>
