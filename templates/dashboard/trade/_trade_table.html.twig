@@ -1,7 +1,6 @@
 {# templates/dashboard/trade/_trade_table.html.twig #}
 
 {% block javascripts %}
-   
     <script>
         $(document).ready(function() {
             $('#tradesTable').DataTable();
@@ -44,9 +43,13 @@
                     <td>{{ trade.pnl }}</td>
                     <td>
                         {% if trade.status == 'open' %}
-                            <form method="POST" action="/close-trade/{{ trade.id }}">
-                                <button type="submit">Close</button>
-                            </form>
+                            {% if role == 'AGENT' %}
+                                <form method="POST" action="/close-trade/{{ trade.id }}">
+                                    <button type="submit">Close</button>
+                                </form>
+                            {% else %}
+                                ---
+                            {% endif %}
                         {% else %}
                             ---
                         {% endif %}
