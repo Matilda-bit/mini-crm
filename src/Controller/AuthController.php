@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Entity\Log;
 use App\Form\RegistrationFormType;
 use App\Repository\UserRepository;
 use App\Security\LoginFormAuthenticator;
@@ -19,6 +20,7 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Security\Http\Authentication\UserAuthenticatorInterface;
 use Symfony\Component\Security\Http\FirewallMapInterface;
+use App\Service\LoggerService;
 
 class AuthController extends AbstractController
 {
@@ -28,10 +30,12 @@ class AuthController extends AbstractController
 
     public function __construct(
         UserAuthenticatorInterface $userAuthenticator,
-        LoginFormAuthenticator $authenticator
+        LoginFormAuthenticator $authenticator,
+        LoggerService $loggerService
     ) {
         $this->userAuthenticator = $userAuthenticator;
         $this->authenticator = $authenticator;
+        $this->loggerService = $loggerService;
     }
 
 
@@ -81,20 +85,28 @@ class AuthController extends AbstractController
                 // return;
             }
 
-
             $em->persist($user);
             $em->flush();
 
-
+            $this->loggerService->logAction($user->getId(), 'register');
             $this->addFlash($successTitle, 'Registration successful! You can now log in.');
             $this->loginAfterRegistration($request,$user);
 
-            return $this->redirectToDashboard();
+            return $this->redirectToRoute($this->getRouteByRole($user->getRoles()[0]));
         }
 
         return $this->render('auth/index.html.twig', [
             'registrationForm' => $form->createView(),
         ]);
+    }
+
+    private function getRouteByRole(string $role): string
+    {
+        return match ($role) {
+            'ROLE_ADMIN' => 'admin_dashboard',
+            'ROLE_REP' => 'agent_dashboard',
+            default => 'user_dashboard',
+        };
     }
 
     private function loginAfterRegistration(Request $request, User $user): void

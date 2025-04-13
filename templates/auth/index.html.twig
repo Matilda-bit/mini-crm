@@ -12,12 +12,10 @@
 <body>
     <h1>Welcome to the CRM</h1>
 
-    {% for message in app.flashes('error') %}
-        <div style="color: red">{{ message }}</div>
-    {% endfor %}
-    {% for message in app.flashes('success') %}
-        <div style="color: green">{{ message }}</div>
-    {% endfor %}
+    {% include 'components/flash_messages.html.twig' with {
+    'error': 'login_error',
+    'success': 'login_success'
+    } %}
 
     <button id="show-login">Login</button>
     <button id="show-register">Register</button>
