@@ -110,7 +110,7 @@ class AdminProfileController extends AbstractController
                 $orphans[] = $u;
             }
         }
-    
+
         $agents = [];
         $users = [];
         $queue = [$user];
@@ -154,10 +154,53 @@ class AdminProfileController extends AbstractController
                 }
             }
         }
-    
+
         return [$users, $agents];
     }
 
+    private function getAllSubordinatesAgents(UserInterface $user): array
+    {
+        $userRepository = $this->getDoctrine()->getRepository(User::class);
+        $allUsers = $userRepository->createQueryBuilder('u')
+        ->where('u.role IN (:roles)')
+        ->setParameter('roles', ['ADMIN', 'REP'])
+        ->getQuery()
+        ->getResult();
+
+        $map = [];
+        
+        foreach ($allUsers as $u) {
+            $agent = $u->getAgent();
+            if ($agent !== null) {
+                $map[$agent->getId()][] = $u;
+            } 
+        }
+    
+        $agents = [];
+        $queue = [$user];
+        $visitedIds = [$user->getId()];
+    
+        while (!empty($queue)) {
+            /** @var UserInterface $current */
+            $current = array_shift($queue);
+            $subordinates = $map[$current->getId()] ?? [];
+            foreach ($subordinates as $sub) {
+                $subId = $sub->getId();
+                if (in_array($subId, $visitedIds, true)) {
+                    continue;
+                }
+    
+                $visitedIds[] = $subId;
+    
+                if ($sub->getRole() === 'REP') {
+                    $agents[] = $sub;
+                    $queue[] = $sub;
+                } 
+            }
+        }
+
+        return $agents;
+    }
 
 
 
@@ -220,10 +263,8 @@ class AdminProfileController extends AbstractController
             $a = $a->getAgent();
         }
 
-        if($user->getAgent() && $user->getRole !== 'USER'){
-            // Check if agent is a subordinate of the user
-            list($userSubs, $agentSubs) = $this->getAllSubordinates($user, false);
-            $allSubs = array_merge($userSubs, $agentSubs);
+        if($user->getAgent() && $user->getRole() !== 'USER'){
+            $allSubs = $this->getAllSubordinatesAgents($user);
             foreach ($allSubs as $sub) {
                 if ($sub->getId() === $agent->getId()) {
                     $this->addFlash($errorTitle, 'Assignment denied: agent is a subordinate of the user.');
@@ -238,7 +279,7 @@ class AdminProfileController extends AbstractController
         $this->addFlash($successTitle, "Agent [ID: {$agent->getId()}] was successfully assigned to user {$user->getUsername()} [ID: {$user->getId()}].");
         $this->loggerService->logAction(
             $currentUser->getId(),
-            sprintf('Assigned agent ID %d to user ID %d', $agent->getId(), $user->getId())
+            sprintf('Assigned agent ID %d to %s ID %d', $agent->getId(),  $user->getRole() === 'REP' ? 'agent' : 'user', $user->getId())
         );
         return $redirect;
     }
