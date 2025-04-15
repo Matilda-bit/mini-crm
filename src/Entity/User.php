@@ -15,9 +15,9 @@ class User implements UserInterface
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255, unique: true)]
+    #[ORM\Column(length: 50, unique: true)]
     #[Assert\NotBlank(message: "Username is required.")]
-    #[Assert\Length(min: 3, max: 255, minMessage: "Username must be at least 3 characters long.", maxMessage: "Username cannot be longer than 255 characters.")]
+    #[Assert\Length(min: 3, max: 50, minMessage: "Username must be at least 3 characters long.", maxMessage: "Username cannot be longer than 50 characters.")]
     private ?string $username = null;
 
     #[ORM\Column(length: 255)]
@@ -25,8 +25,8 @@ class User implements UserInterface
     #[Assert\Length(min: 6, minMessage: "Password must be at least 6 characters long.")]
     private ?string $password = null;
 
-    #[ORM\Column(type: 'datetime', nullable: true)]
-    private ?\DateTimeInterface $loginTime = null;
+    #[ORM\Column(type: 'datetime', options: ['default' => 'CURRENT_TIMESTAMP'])]
+    private \DateTimeInterface $loginTime;
 
     #[ORM\Column(type: 'currency_enum')]
     private $currency;
@@ -40,11 +40,11 @@ class User implements UserInterface
     #[ORM\Column(type: 'decimal', precision: 15, scale: 2)]
     private ?string $equity = null;
 
-    #[ORM\OneToOne(targetEntity: User::class)]
+    #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(name: 'agent_id', referencedColumnName: 'id', nullable: true)]
     private ?User $agent = null;
 
-    #[ORM\Column(type: 'datetime')]
+    #[ORM\Column(type: 'datetime', options: ['default' => 'CURRENT_TIMESTAMP'])]
     private \DateTimeInterface $dateCreated;
 
     // Symfony Security Methods
