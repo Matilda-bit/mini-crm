@@ -5,6 +5,8 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Entity\Trade;
 use App\Service\TradeService;
+use App\Service\AgentAssignmentService;
+use App\Service\HierarchyService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,22 +22,27 @@ class AdminProfileController extends AbstractController
 {
 
     public function __construct(
-        LoggerService $loggerService
+        LoggerService $loggerService,
+        AgentAssignmentService $agentAssignmentService,
+        TradeService $tradeService,
+        HierarchyService $hierarchyService
     ) {
         $this->loggerService = $loggerService;
+        $this->agentAssignmentService = $agentAssignmentService;
+        $this->tradeService = $tradeService;
+        $this->hierarchyService = $hierarchyService;
     }
 
     #[Route('/admin/dashboard', name: 'admin_dashboard', methods: ['GET'])]
     public function index(UserInterface $user): Response
     {
 
-        if ($user->getRole()!== 'ADMIN') {
-            throw new AccessDeniedException('Access Denied. [AdminProfileController]');
-        }
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
-        list($users, $agents) = $this->getAllSubordinates($user, true);
-        $trades = $this->getAllTradesForUserAndSubordinates($user, $users);
-        $repHierarchy = $this->buildHierarchyTree($user);
+        list($users, $agents) = $this->hierarchyService->getAllSubordinates($user, true);
+
+        $trades = $this->tradeService->getAllTradesForUserAndSubordinates($user, $users);
+        $repHierarchy = $this->hierarchyService->buildHierarchyTree($user);
 
         // dd(['AGENTS1' => $agents, 'USERS1' => $users]);
 
@@ -49,160 +56,11 @@ class AdminProfileController extends AbstractController
         ]);
     }
 
-    private function buildHierarchyTree(UserInterface $user): array
-    {
-        $userRepository = $this->getDoctrine()->getRepository(User::class);
-        $allUsers = $userRepository->findAll();
-    
-        $map = [];
-        $nodes = [];
-        $orphans = [];
-
-        foreach ($allUsers as $u) {
-            $nodes[$u->getId()] = [
-                'user' => [
-                    'id' => $u->getId(),
-                    'username' => $u->getUsername(),
-                    'role' => $u->getRole(),
-                    'agentNull' => $u->getAgent() ? false : true
-                ],
-                'children' => []
-            ];
-            if ($u->getAgent()) {
-                $map[$u->getAgent()->getId()][] = $u->getId(); 
-            } else {
-                $orphans[] = $u->getId(); 
-            }
-        }
-    
-        $visited = [];
-    
-        $buildTree = function ($id) use (&$buildTree, &$map, &$nodes, &$visited) {
-            if (in_array($id, $visited, true)) {
-                return null;
-            }
-            $visited[] = $id;
-    
-            $node = $nodes[$id];
-            $childrenIds = $map[$id] ?? [];
-    
-            foreach ($childrenIds as $childId) {
-                $childNode = $buildTree($childId);
-                if ($childNode) {
-                    $node['children'][] = $childNode;
-                }
-            }
-    
-            return $node;
-        };
-    
-        $root = $buildTree($user->getId());
-
-        // ADMIN only
-        if ($user->getRole() === 'ADMIN') {
-            foreach ($orphans as $orphanId) {
-                if (!in_array($orphanId, $visited, true) && $orphanId !== $user->getId()) {
-                    $root['children'][] = $nodes[$orphanId];
-                }
-            }
-        }
-
-        return [$root];
-    }
-
-
-    private function getAllSubordinates(UserInterface $user, bool $withNull): array
-    {
-    
-        $userRepository = $this->getDoctrine()->getRepository(User::class);
-        $allUsers = $userRepository->findAll();
-    
-        $map = [];
-        $orphans = [];
-        foreach ($allUsers as $u) {
-            $agent = $u->getAgent();
-            if ($agent !== null) {
-                $map[$agent->getId()][] = $u;
-            } elseif ($u->getId() !== $user->getId()) {
-                $orphans[] = $u;
-            }
-        }
-
-        $agents = [];
-        $users = [];
-        $queue = [$user];
-        $visitedIds = [$user->getId()];
-    
-        foreach ($orphans as $u) {
-            $uid = $u->getId();
-            if (!in_array($uid, $visitedIds, true)) {
-                $visitedIds[] = $uid;
-                $queue[] = $u;
-            }
-        }
-    
-        while (!empty($queue)) {
-            /** @var UserInterface $current */
-            $current = array_shift($queue);
-            $subordinates = $map[$current->getId()] ?? [];
-    
-            foreach ($subordinates as $sub) {
-                $subId = $sub->getId();
-                if (in_array($subId, $visitedIds, true)) {
-                    continue;
-                }
-    
-                $visitedIds[] = $subId;
-    
-                if ($sub->getRole() === 'REP') {
-                    $agents[] = $sub;
-                    $queue[] = $sub;
-                } elseif ($sub->getRole() === 'USER') {
-                    $users[] = $sub;
-                }
-            }
-        }
-        if($withNull){
-            foreach ($orphans as $u) {
-                if ($u->getRole() === 'REP' && !in_array($u, $agents, true)) {
-                    $agents[] = $u;
-                } elseif ($u->getRole() === 'USER' && !in_array($u, $users, true)) {
-                    $users[] = $u;
-                }
-            }
-        }
-
-        return [$users, $agents];
-    }
-
-
-
-    private function getAllTradesForUserAndSubordinates(UserInterface $user, array $users): array
-    {
-        if ($user->getRole() === 'ADMIN') {
-            // Админ видит все трейды без ограничений
-            return $this->getDoctrine()
-                ->getRepository(Trade::class)
-                ->findAll();
-        }
-    
-        $allUsers = array_merge([$user], $users);
-    
-        return $this->getDoctrine()
-            ->getRepository(Trade::class)
-            ->createQueryBuilder('t')
-            ->where('t.user IN (:users)')
-            ->setParameter('users', $allUsers)
-            ->getQuery()
-            ->getResult();
-    }
-
     #[Route('/admin/assign-agent', name: 'admin_assign_agent', methods: ['POST'])]
     public function assignAgent(Request $request, UserInterface $currentUser): RedirectResponse
     {
         //must-have - check role of current user \/
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
         
         $userId = $request->request->get('user_id');
         $agentId = $request->request->get('agent_id');
@@ -210,6 +68,7 @@ class AdminProfileController extends AbstractController
         $userRepo = $this->getDoctrine()->getRepository(User::class);
         $user = $userRepo->find($userId);
         $agent = $userRepo->find($agentId);
+
         $redirect = new RedirectResponse($this->generateUrl('admin_dashboard'));
         
         if (!$user || !$agent) {
@@ -223,95 +82,21 @@ class AdminProfileController extends AbstractController
         $errorTitle = $isUser ? 'users_tb_error' : 'agent_tb_error';
         $successTitle = $isUser ? 'users_tb_success' : 'agents_tb_success';
 
-        if($agent->getAgent() === null) {
-            $this->addFlash($errorTitle, "Assignment denied: please assign an agent to agent [{$agentId}] first.");
-            return $redirect;
+        try {
+            $message = $this->agentAssignmentService->assignAgent($user, $agent);
+            $this->addFlash($successTitle, $message);
+        } catch (\RuntimeException $e) {
+            $this->addFlash($errorTitle, $e->getMessage());
         }
 
-        if ($agent->getRole() === 'USER') {
-            $this->addFlash($errorTitle, 'User can’t be in charge of an agent or other user.');
-            return $redirect;
-        }
-
-        $a = $agent;
-        while ($a !== null) {
-            if ($a->getId() === $user->getId()) {
-                $this->addFlash($errorTitle, 'Assignment denied: circular agent relationship detected.');
-                return $redirect;
-            }
-            $a = $a->getAgent();
-        }
-
-        if($user->getAgent() && !$isUser){
-            $allSubs = $this->getAllSubordinatesAgents($user);
-            foreach ($allSubs as $sub) {
-                if ($sub->getId() === $agent->getId()) {
-                    $this->addFlash($errorTitle, 'Assignment denied: agent is a subordinate of the user.');
-                    return $redirect;
-                }
-            }
-        }
-        
-        $user->setAgent($agent);
-        $this->getDoctrine()->getManager()->flush();
-        
-        $this->addFlash($successTitle, "Agent [ID: {$agent->getId()}] was successfully assigned to user {$user->getUsername()} [ID: {$user->getId()}].");
-        $this->loggerService->logAction(
-            $currentUser->getId(),
-            sprintf('Assigned agent ID %d to %s ID %d', $agent->getId(),  $isUser ? 'user' : 'agent', $user->getId())
-        );
         return $redirect;
-    }
-
-
-    private function getAllSubordinatesAgents(UserInterface $user): array
-    {
-        $userRepository = $this->getDoctrine()->getRepository(User::class);
-        $allUsers = $userRepository->createQueryBuilder('u')
-        ->where('u.role IN (:roles)')
-        ->setParameter('roles', ['ADMIN', 'REP'])
-        ->getQuery()
-        ->getResult();
-
-        $map = [];
-        
-        foreach ($allUsers as $u) {
-            $agent = $u->getAgent();
-            if ($agent !== null) {
-                $map[$agent->getId()][] = $u;
-            } 
-        }
-    
-        $agents = [];
-        $queue = [$user];
-        $visitedIds = [$user->getId()];
-    
-        while (!empty($queue)) {
-            /** @var UserInterface $current */
-            $current = array_shift($queue);
-            $subordinates = $map[$current->getId()] ?? [];
-            foreach ($subordinates as $sub) {
-                $subId = $sub->getId();
-                if (in_array($subId, $visitedIds, true)) {
-                    continue;
-                }
-    
-                $visitedIds[] = $subId;
-    
-                if ($sub->getRole() === 'REP') {
-                    $agents[] = $sub;
-                    $queue[] = $sub;
-                } 
-            }
-        }
-
-        return $agents;
     }
 
 
     #[Route('/open-trade', name: 'open_trade', methods: ['POST'])]
     public function openTrade(Request $request, EntityManagerInterface $em, UserInterface $user): RedirectResponse
     {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
         $this->tradeService->handleTrade($request, $em, $user);
         $referer = $request->headers->get('referer');
         return $this->redirect($referer . '#open-trade');
@@ -321,6 +106,7 @@ class AdminProfileController extends AbstractController
     #[Route('/close-trade/{id}', name: 'close_trade', methods: ['POST'])]
     public function closeTrade(int $id, Request $request, EntityManagerInterface $em)
     {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
         $referer = $request->headers->get('referer');
         $this->tradeService->closeTrade($id, $request, $em);
         return $this->redirect($referer . '#tradesTable');

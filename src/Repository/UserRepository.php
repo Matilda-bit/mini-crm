@@ -21,6 +21,15 @@ class UserRepository extends ServiceEntityRepository
         parent::__construct($registry, User::class);
     }
 
+    public function getAllUsersWithAgents(): array
+    {
+        return $this->createQueryBuilder('u')
+            ->leftJoin('u.agent', 'a')
+            ->addSelect('a')
+            ->getQuery()
+            ->getResult();
+    }
+
 //    /**
 //     * @return User[] Returns an array of User objects
 //     */

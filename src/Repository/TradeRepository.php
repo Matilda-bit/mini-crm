@@ -1,10 +1,13 @@
 <?php
-
+//Работает напрямую с БД — извлекает, сохраняет, удаляет сущности -  
+// как DAO (Data Access Object).
+// Ты работаешь с сущностями напрямую: ищешь, сохраняешь, удаляешь.
 namespace App\Repository;
 
 use App\Entity\Trade;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+
 
 /**
  * @extends ServiceEntityRepository<Trade>
@@ -19,6 +22,15 @@ class TradeRepository extends ServiceEntityRepository
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Trade::class);
+    }
+
+    public function findByUsers(array $users): array
+    {
+        return $this->createQueryBuilder('t')
+            ->where('t.user IN (:users)')
+            ->setParameter('users', $users)
+            ->getQuery()
+            ->getResult();
     }
 
 //    /**

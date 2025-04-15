@@ -7,6 +7,7 @@ namespace App\Service;
 use App\Entity\User;
 use App\Entity\Trade;
 use App\Entity\Asset;
+use App\Repository\TradeRepository;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
@@ -23,11 +24,13 @@ class TradeService
 
     private SessionInterface $session;
     private AssetService $assetService;
+    private TradeRepository $tradeRepository;
 
-    public function __construct(SessionInterface $session, AssetService $assetService)
+    public function __construct(SessionInterface $session, AssetService $assetService, TradeRepository $tradeRepository)
     {
         $this->session = $session;
         $this->assetService = $assetService;
+        $this->tradeRepository = $tradeRepository;
     }
 
     public function handleTrade( Request $request, EntityManagerInterface $em, UserInterface $user)
@@ -143,4 +146,16 @@ class TradeService
 
         return false;
     }
+
+    public function getAllTradesForUserAndSubordinates(UserInterface $user, array $subordinates): array
+    {
+        if ($user->getRole() === 'ADMIN') {
+            return $this->tradeRepository->findAll();
+        }
+
+        $allUsers = array_merge([$user], $subordinates);
+        return $this->tradeRepository->findByUsers($allUsers);
+    }
+
+
 }

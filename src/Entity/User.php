@@ -40,6 +40,7 @@ class User implements UserInterface
     #[ORM\Column(type: 'decimal', precision: 15, scale: 2)]
     private ?string $equity = null;
 
+    //fetch="EAGER" 
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(name: 'agent_id', referencedColumnName: 'id', nullable: true)]
     private ?User $agent = null;
