@@ -12,3 +12,13 @@
 {% endblock %}
     
   
+{% block javascripts %}
+    {{ parent() }}
+
+    <script>
+     $(document).ready(function() {
+            $('#tradesTable').DataTable();
+        });
+    </script>
+    
+{% endblock %}

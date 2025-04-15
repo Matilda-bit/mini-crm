@@ -8,17 +8,17 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Core\User\UserInterface;
-//todo: refactor userController
+//todo: refactor userController?
+
+#[IsGranted('ROLE_REP')]
 class ProfileController extends AbstractController
 {
     #[Route('/user/dashboard', name: 'user_dashboard', methods: ['GET'])]
     public function index(UserInterface $user)
     {
-        // Получаем данные пользователя
         $userData = $this->getDoctrine()->getRepository(User::class)->find($user->getId());
-        
-        // Получаем открытые сделки пользователя
-        $trades = $this->getDoctrine()->getRepository(Trade::class)->findBy(['user' => $userData, 'status' => 'open']);
+
+        $trades = $this->getDoctrine()->getRepository(Trade::class)->findBy(['user' => $userData]);
         
         return $this->render('dashboard/user/profile.html.twig', [
             'controller_name' => 'ProfileController',

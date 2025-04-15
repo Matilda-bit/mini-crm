@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Entity\Trade;
+use App\Service\TradeService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
@@ -283,6 +284,25 @@ class AdminProfileController extends AbstractController
         );
         return $redirect;
     }
+
+    #[Route('/open-trade', name: 'open_trade', methods: ['POST'])]
+    public function openTrade(Request $request, EntityManagerInterface $em, UserInterface $user): RedirectResponse
+    {
+        $this->tradeService->handleTrade($request, $em, $user);
+        $referer = $request->headers->get('referer');
+        return $this->redirect($referer . '#open-trade');
+    }
+
+
+    #[Route('/close-trade/{id}', name: 'close_trade', methods: ['POST'])]
+    public function closeTrade(int $id, Request $request, EntityManagerInterface $em)
+    {
+        $referer = $request->headers->get('referer');
+        $this->tradeService->closeTrade($id, $request, $em);
+        return $this->redirect($referer . '#tradesTable');
+        
+    }
+    
 
 
 }

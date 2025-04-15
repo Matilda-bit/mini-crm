@@ -4,7 +4,6 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Entity\Trade;
-use App\Entity\Asset;
 use App\Service\TradeService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -33,7 +32,6 @@ class AgentProfileController extends AbstractController
         list($users, $agents) = $this->filterUsersAndAgentsByHierarchy($user);
         $trades = $this->getAllTradesForUserAndSubordinates($user, $users);
         $repHierarchy = $this->buildHierarchyTree($user);
-        //$allUsers = array_merge($users, $agents);
             
         return $this->render('/dashboard/agent/agent.html.twig', [
             'controller_name' => 'AgentProfileController',
