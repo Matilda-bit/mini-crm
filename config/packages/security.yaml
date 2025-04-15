@@ -37,6 +37,9 @@ security:
     access_control:
         - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/agent, roles: ROLE_REP }
+        - { path: ^/assign-agent, roles: [ROLE_ADMIN, ROLE_REP] }
+        - { path: ^/open-trade, roles: [ROLE_ADMIN, ROLE_REP] }
+        - { path: ^/close-trade, roles: [ROLE_ADMIN, ROLE_REP] }
         - { path: ^/profile, roles: ROLE_USER }
         - { path: ^/register, roles: IS_AUTHENTICATED_ANONYMOUSLY }
         - { path: ^/login, roles: IS_AUTHENTICATED_ANONYMOUSLY }
