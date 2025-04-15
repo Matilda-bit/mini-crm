@@ -14,6 +14,10 @@ class Trade
     const STATUS_WON = 'won';
     const STATUS_LOSE = 'lose';
     const STATUS_TIE = 'tie';
+    const STATUS_CLOSED = 'closed';
+    const BUY = 'buy';
+    const SELL = 'sell';
+    
 
     #[ORM\Id]
     #[ORM\GeneratedValue]

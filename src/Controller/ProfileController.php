@@ -20,7 +20,8 @@ class ProfileController extends AbstractController
         // Получаем открытые сделки пользователя
         $trades = $this->getDoctrine()->getRepository(Trade::class)->findBy(['user' => $userData, 'status' => 'open']);
         
-        return $this->render('profile/profile.html.twig', [
+        return $this->render('dashboard/user/profile.html.twig', [
+            'controller_name' => 'ProfileController',
             'user' => $userData,
             'trades' => $trades,
         ]);
@@ -36,7 +37,7 @@ class ProfileController extends AbstractController
         // Получаем открытые сделки пользователя
         $trades = $this->getDoctrine()->getRepository(Trade::class)->findBy(['user' => $userData, 'status' => 'open']);
         
-        return $this->render('profile/profile.html.twig', [
+        return $this->render('dashboard/user/profile.html.twig', [
             'user' => $userData,
             'trades' => $trades,
         ]);

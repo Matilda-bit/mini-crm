@@ -5,7 +5,7 @@ class CurrencyEnumType extends AbstractEnumType
 {
     const CURRENCY_ENUM = 'currency_enum'; 
 
-    protected $values = ['USD', 'EUR', 'GBP', 'BTC'];
+    protected $values = ['USD', 'EUR', 'BTC'];
 
     public static function create()
     {
