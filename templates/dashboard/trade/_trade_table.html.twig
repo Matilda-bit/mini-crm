@@ -43,7 +43,7 @@
                     <td>{{ trade.pnl }}</td>
                     <td>
                         {% if trade.status == 'open' %}
-                            {% if role == 'AGENT' %}
+                            {% if role != 'USER' %}
                                 <form method="POST" action="/close-trade/{{ trade.id }}">
                                     <button type="submit">Close</button>
                                 </form>

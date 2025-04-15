@@ -88,32 +88,3 @@
     <p><em>No agents found...</em></p>
 {% endif %}
 
-
-
-{# todo: move it to assets/js/table-search.js #}
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script>
-    $(document).ready(function() {
-        const table = $('#agentsTable').DataTable({
-            dom: 'lrtip', // убираем стандартный input
-            searching: true
-        });
-
-        $('#customSearch').on('keyup', function() {
-            const selectedColumn = $('#columnSelect').val();
-            const value = this.value;
-
-            if (selectedColumn === 'all') {
-                table.search(value).draw(); // глобальный поиск
-            } else {
-                table.search('').columns().search(''); // сброс всех фильтров
-                table.column(selectedColumn).search(value).draw(); // поиск по выбранной колонке
-            }
-        });
-
-        $('#columnSelect').on('change', function() {
-            $('#customSearch').trigger('keyup'); // сразу применить поиск при смене колонки
-        });
-    });
-</script>

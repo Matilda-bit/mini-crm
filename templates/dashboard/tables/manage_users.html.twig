@@ -4,13 +4,7 @@
     'error': 'users_tb_error',
     'success': 'users_tb_success'
 } %}
-<h2>
-    {% if 'admin' in route %}
-        Manage Users
-    {% else %}
-        Users / Agents
-    {% endif %}
-</h2>
+<h2>Manage Users</h2>
 
 {% if users is not empty %}
 
@@ -52,25 +46,17 @@
                     {% endif %}
                 </td>
                 <td>
-                    {% if 'admin' in route %}
-                        <form method="POST" action="{{ path(route ~ '_assign_agent', {'userId': user.id}) }}">
-                            <select name="agent_id" class="form-control">
-                                {% for agent in agents %}
-                                    <option value="{{ agent.id }}" {% if u.agent and agent.id == u.agent.id %}selected{% endif %}>
-                                        {{ agent.username }} ({{ agent.id }})
-                                    </option>
-                                {% endfor %}
-                            </select>
-                            <input type="hidden" name="user_id" value="{{ u.id }}">
-                            <button type="submit">Assign</button>
-                        </form>
-                    {% else %}
-                        {% if u.agent %}
-                            {{ u.agent.username }}
-                        {% else %}
-                            No Agent
-                        {% endif %}
-                    {% endif %}
+                    <form method="POST" action="{{ path(route ~ '_assign_agent', {'userId': user.id}) }}">
+                        <select name="agent_id" class="form-control">
+                            {% for agent in agents %}
+                                <option value="{{ agent.id }}" {% if u.agent and agent.id == u.agent.id %}selected{% endif %}>
+                                    {{ agent.username }} ({{ agent.id }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="user_id" value="{{ u.id }}">
+                        <button type="submit">Assign</button>
+                    </form>
                 </td>
             </tr>
         {% endfor %}
@@ -79,32 +65,3 @@
 {% else %}
     <p><em>No users found...</em></p>
 {% endif %}
-
-
-{# todo: move it to assets/js/table-search.js #}
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script>
-    $(document).ready(function() {
-        const table = $('#usersTable').DataTable({
-            dom: 'lrtip', // убираем стандартный input
-            searching: true
-        });
-
-        $('#customSearch').on('keyup', function() {
-            const selectedColumn = $('#columnSelect').val();
-            const value = this.value;
-
-            if (selectedColumn === 'all') {
-                table.search(value).draw(); // глобальный поиск
-            } else {
-                table.search('').columns().search(''); // сброс всех фильтров
-                table.column(selectedColumn).search(value).draw(); // поиск по выбранной колонке
-            }
-        });
-
-        $('#columnSelect').on('change', function() {
-            $('#customSearch').trigger('keyup'); // сразу применить поиск при смене колонки
-        });
-    });
-</script>

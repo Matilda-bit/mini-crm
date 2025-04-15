@@ -17,7 +17,11 @@
             <label for="target_user">User:</label>
             <select name="target_user" id="target_user" required>
                 {% for u in users %}
-                    <option value="{{ u.id }}">{{ u.username }}</option>
+                    {% if u.agent != null %}
+                        <option value="{{ u.id }}" data-currency="{{ u.currency|default('EUR') }}">
+                            {{ u.username }}
+                        </option>
+                    {% endif %}
                 {% endfor %}
             </select><br><br>
         {% endif %}
@@ -87,7 +91,7 @@
     let bid = 0;
     let ask = 0;
     const lotSize = 10;
-    const userCurrency = '{{ user.currency|default("EUR") }}';
+    let userCurrency = 'EUR';
     const conversionRate = 0.9215; // USD to EUR ONLYYY!!!
     const marketData = {};
 
@@ -103,6 +107,20 @@
     document.getElementById('position').addEventListener('change', calculateValues);
     document.getElementById('asset').addEventListener('change', updateRatesFromAsset);
 
+    const userSelect = document.getElementById('target_user');
+
+    if (userSelect) {
+        userSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            userCurrency = selectedOption.dataset.currency || 'EUR';
+            calculateValues();
+        });
+
+        // Установим валюту при первой загрузке формы
+        const initialOption = userSelect.options[userSelect.selectedIndex];
+        userCurrency = initialOption.dataset.currency || 'EUR';
+    }
+    
     function updateRatesFromAsset() {
         const selectedAsset = document.getElementById('asset').value;
         const assetData = marketData[selectedAsset];

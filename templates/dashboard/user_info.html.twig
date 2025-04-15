@@ -3,7 +3,7 @@
 <div class="user-info-container">
     <h1>Welcome, <span class="username">{{ user.username }}</span>!</h1>
     <h3 class="dashboard-title">
-        This is {{ user.role == 'ADMIN' ? 'Admin' : 'Agent' }} dashboard, and using: <em>{{ controller_name }}</em>
+        This is {{ user.role == 'ADMIN' ? 'Admin' : user.role == 'REP' ? 'Agent' : 'profile' }} dashboard, and using: <em>{{ controller_name }}</em>
     </h3>
 
     <div class="info-card">
@@ -37,14 +37,16 @@
             <span class="info-label">Currency:</span>
             <span class="info-value">{{ user.currency }}</span>
         </div>
-        <div class="info-row">
-            <span class="info-label">Total PNL:</span>
-            <span class="info-value {{ user.totalPnl < 0 ? 'negative' : 'positive' }}">{{ user.totalPnl }}</span>
-        </div>
-        <div class="info-row">
-            <span class="info-label">Equity:</span>
-            <span class="info-value">{{ user.equity }}</span>
-        </div>
+        {% if user.role == 'USER' %}
+            <div class="info-row">
+                <span class="info-label">Total PNL:</span>
+                <span class="info-value {{ user.totalPnl < 0 ? 'negative' : 'positive' }}">{{ user.totalPnl }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Equity:</span>
+                <span class="info-value">{{ user.equity }}</span>
+            </div>
+        {% endif %}
     </div>
 </div>
 

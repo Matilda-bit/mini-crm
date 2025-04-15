@@ -1,3 +1,4 @@
+{# components/flash_messages.html.twig #}
 {% if error is defined %}
     {% for message in app.flashes(error) %}
         <div style="color: red; margin-bottom: 5px;">{{ message }}</div>
