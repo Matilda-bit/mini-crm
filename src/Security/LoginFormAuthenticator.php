@@ -62,6 +62,12 @@ class LoginFormAuthenticator extends AbstractLoginFormAuthenticator
     {
         $user = $token->getUser();
 
+        if ($user instanceof User) {
+            $user->setLoginTime(new \DateTime());
+            $this->em->flush();
+            $this->loggerService->logAction($user->getId(), 'login');
+        }
+
         $role = $user->getRoles()[0];
         $routeMap = [
             'ROLE_ADMIN' => 'admin_dashboard',
