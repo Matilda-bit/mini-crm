@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Entity\Trade;
 use App\Entity\Asset;
+use App\Service\TradeService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,13 +18,13 @@ use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 #[IsGranted('ROLE_REP')]
 class AgentProfileController extends AbstractController
 {
-    //move constants ? todo
-    const STATUS_OPEN = 'open';
-    const STATUS_WON = 'won';
-    const STATUS_LOSE = 'lose';
-    const STATUS_TIE = 'tie';
-    const STATUS_CLOSED = 'closed'; 
-    const BUY = 'buy';
+
+    private $tradeService;
+
+    public function __construct(TradeService $tradeService)
+    {
+        $this->tradeService = $tradeService;
+    }
 
     #[Route('/agent/dashboard', name: 'agent_dashboard', methods: ['GET'])]
     public function index(UserInterface $user)
@@ -32,6 +33,7 @@ class AgentProfileController extends AbstractController
         list($users, $agents) = $this->filterUsersAndAgentsByHierarchy($user);
         $trades = $this->getAllTradesForUserAndSubordinates($user, $users);
         $repHierarchy = $this->buildHierarchyTree($user);
+        //$allUsers = array_merge($users, $agents);
             
         return $this->render('/dashboard/agent/agent.html.twig', [
             'controller_name' => 'AgentProfileController',
@@ -200,76 +202,8 @@ class AgentProfileController extends AbstractController
     #[Route('/open-trade', name: 'open_trade', methods: ['POST'])]
     public function openTrade(Request $request, EntityManagerInterface $em, UserInterface $user): RedirectResponse
     {
+        $this->tradeService->handleTrade($request, $em, $user);
         $referer = $request->headers->get('referer');
-        
-        $targetUserId = $request->request->get('target_user'); 
-        $position = $request->request->get('position');
-        $lotCount = (float) $request->request->get('lot_count');
-        $sl = $request->request->get('sl');
-        $tp = $request->request->get('tp');
-        $assetName = $request->request->get('asset');
-        $errorTitle = 'open_trade_error';
-        $successTitle = 'open_trade_success';
-
-        $targetUser = $em->getRepository(User::class)->find($targetUserId); 
-        if (!$targetUser) {
-            $this->addFlash($errorTitle, 'User not found');
-            return $this->redirect($referer . '#open-trade');
-        }
-
-        $asset = $em->getRepository(Asset::class)->findOneBy(['assetName' => $assetName]);
-        if (!$asset) {
-            $this->addFlash($errorTitle, 'Asset not found');
-            return $this->redirect($referer . '#open-trade');
-        }
-
-        // Получение bid и ask
-        $bidRate = $asset->getBid();
-        $askRate = $asset->getAsk();
-        $entryRate = $position === 'buy' ? $askRate : $bidRate;
-
-        // Постоянные значения
-        $lotSize = 10;
-        $conversionRate = 0.9215; // USD → EUR (как в задании)
-        $userCurrency = $targetUser->getCurrency(); // Предположим, поле есть (например 'EUR' или 'USD')
-
-        // Вычисления
-        $tradeSize = $lotSize * $lotCount;
-        $isConvert = $assetName === 'BTC/USD' && $userCurrency === 'EUR';
-
-        // pipValue (в валюте пользователя)
-        $pipValue = $tradeSize * 0.01;
-        if ($isConvert) {
-            $pipValue *= $conversionRate;
-        }
-
-        // userMargin
-        $userMargin = $tradeSize * 0.1;
-        if ($isConvert) {
-            $userMargin *= $conversionRate;
-        }
-
-        $entryRate = $position === self::BUY ? $asset->getAsk() : $asset->getBid();
-
-        $trade = new Trade();
-        $trade->setUser($targetUser);
-        $trade->setAgentId($user); // null если обычный пользователь, иначе — агент | opened_by_agent_id
-        $trade->setPosition($position);//buy or sell
-        $trade->setLotCount($lotCount);
-        $trade->setStopLoss($sl ?: null);
-        $trade->setTakeProfit($tp ?: null);
-        $trade->setStatus(self::STATUS_OPEN);
-        $trade->setEntryRate($entryRate);
-        $trade->setTradeSize($tradeSize);
-        // $trade->setPipValue($pipValue); //can be calculate
-        $trade->setUsedMargin($userMargin);
-        $trade->setDateCreated(new \DateTime());
-
-        $em->persist($trade);
-        $em->flush();
-
-        $this->addFlash($successTitle, 'Trade successfully opened');
-
         return $this->redirect($referer . '#open-trade');
     }
 
@@ -278,37 +212,9 @@ class AgentProfileController extends AbstractController
     public function closeTrade(int $id, Request $request, EntityManagerInterface $em)
     {
         $referer = $request->headers->get('referer');
-        $trade = $em->getRepository(Trade::class)->find($id);
-    
-        if (!$trade) {
-            $this->addFlash('close_trade_error', 'Trade not found.');
-            return $this->redirect($request->headers->get('referer'));
-        }
-    
-        $asset = $this->getDoctrine()->getRepository(Asset::class)->findOneBy(['assetName' => 'BTC/USD']);
-        $currentRate = ($trade->getPosition() === self::BUY) ? $asset->getBid() : $asset->getAsk();
-    
-        $pnl = 0;
-        if ($trade->getPosition() === self::BUY) {
-            $pnl = ($currentRate - $trade->getEntryRate()) * $trade->getLotCount() * 0.01;
-        } else {
-            $pnl = ($trade->getEntryRate() - $currentRate) * $trade->getLotCount() * 0.01;
-        }
-    
-        $userCurrency = $trade->getUser()->getCurrency();
-        $margin = $trade->getTradeSize() * 0.1 * $currentRate;
-    
-        $trade->setStatus(self::STATUS_CLOSED);
-        $trade->setCloseRate($currentRate);
-        $trade->setDateClose(new \DateTime());
-        $trade->setPnl($pnl);
-        $trade->setUsedMargin($margin);
-    
-        $em->flush();
-    
-        $this->addFlash('close_trade_success', "Trade ID: [{$trade->getId()}] was successfully closed.");
-    
+        $this->tradeService->closeTrade($id, $request, $em);
         return $this->redirect($referer . '#tradesTable');
+        
     }
     
 }
