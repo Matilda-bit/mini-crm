@@ -175,50 +175,6 @@ class AdminProfileController extends AbstractController
         return [$users, $agents];
     }
 
-    private function getAllSubordinatesAgents(UserInterface $user): array
-    {
-        $userRepository = $this->getDoctrine()->getRepository(User::class);
-        $allUsers = $userRepository->createQueryBuilder('u')
-        ->where('u.role IN (:roles)')
-        ->setParameter('roles', ['ADMIN', 'REP'])
-        ->getQuery()
-        ->getResult();
-
-        $map = [];
-        
-        foreach ($allUsers as $u) {
-            $agent = $u->getAgent();
-            if ($agent !== null) {
-                $map[$agent->getId()][] = $u;
-            } 
-        }
-    
-        $agents = [];
-        $queue = [$user];
-        $visitedIds = [$user->getId()];
-    
-        while (!empty($queue)) {
-            /** @var UserInterface $current */
-            $current = array_shift($queue);
-            $subordinates = $map[$current->getId()] ?? [];
-            foreach ($subordinates as $sub) {
-                $subId = $sub->getId();
-                if (in_array($subId, $visitedIds, true)) {
-                    continue;
-                }
-    
-                $visitedIds[] = $subId;
-    
-                if ($sub->getRole() === 'REP') {
-                    $agents[] = $sub;
-                    $queue[] = $sub;
-                } 
-            }
-        }
-
-        return $agents;
-    }
-
 
 
     private function getAllTradesForUserAndSubordinates(UserInterface $user, array $users): array
@@ -268,12 +224,9 @@ class AdminProfileController extends AbstractController
         $successTitle = $isUser ? 'users_tb_success' : 'agents_tb_success';
 
         if($agent->getAgent() === null) {
-            $this->addFlash($errorTitle, "Assignment denied: assign agent for [{$agentId}] before.");
+            $this->addFlash($errorTitle, "Assignment denied: please assign an agent to agent [{$agentId}] first.");
             return $redirect;
         }
-
-
-
 
         if ($agent->getRole() === 'USER') {
             $this->addFlash($errorTitle, 'User can’t be in charge of an agent or other user.');
@@ -309,6 +262,52 @@ class AdminProfileController extends AbstractController
         );
         return $redirect;
     }
+
+
+    private function getAllSubordinatesAgents(UserInterface $user): array
+    {
+        $userRepository = $this->getDoctrine()->getRepository(User::class);
+        $allUsers = $userRepository->createQueryBuilder('u')
+        ->where('u.role IN (:roles)')
+        ->setParameter('roles', ['ADMIN', 'REP'])
+        ->getQuery()
+        ->getResult();
+
+        $map = [];
+        
+        foreach ($allUsers as $u) {
+            $agent = $u->getAgent();
+            if ($agent !== null) {
+                $map[$agent->getId()][] = $u;
+            } 
+        }
+    
+        $agents = [];
+        $queue = [$user];
+        $visitedIds = [$user->getId()];
+    
+        while (!empty($queue)) {
+            /** @var UserInterface $current */
+            $current = array_shift($queue);
+            $subordinates = $map[$current->getId()] ?? [];
+            foreach ($subordinates as $sub) {
+                $subId = $sub->getId();
+                if (in_array($subId, $visitedIds, true)) {
+                    continue;
+                }
+    
+                $visitedIds[] = $subId;
+    
+                if ($sub->getRole() === 'REP') {
+                    $agents[] = $sub;
+                    $queue[] = $sub;
+                } 
+            }
+        }
+
+        return $agents;
+    }
+
 
     #[Route('/open-trade', name: 'open_trade', methods: ['POST'])]
     public function openTrade(Request $request, EntityManagerInterface $em, UserInterface $user): RedirectResponse
