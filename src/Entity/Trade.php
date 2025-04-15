@@ -53,7 +53,7 @@ class Trade
     #[ORM\Column(type: "decimal", precision: 15, scale: 2, nullable: true)]
     private ?float $closeRate = null;
 
-    #[ORM\Column(type: "datetime")]
+    #[ORM\Column(type: "datetime", options: ['default' => 'CURRENT_TIMESTAMP'])]
     private \DateTime $dateCreated;
 
     #[ORM\Column(type: "datetime", nullable: true)]

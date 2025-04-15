@@ -30,7 +30,7 @@ class Asset
     #[Assert\NotBlank(message: "Date update is required.")]
     private ?\DateTimeInterface $dateUpdate = null;
 
-    #[ORM\Column(type: "string", length: 10, options: ["default" => "BTC/USD"])]
+    #[ORM\Column(type: "string", length: 10, unique: true, options: ["default" => "BTC/USD"])]
     #[Assert\NotBlank(message: "Asset name is required.")]
     private string $assetName = 'BTC/USD';
 

@@ -94,15 +94,15 @@ binanceWS.on('message', (data) => {
         date_update = VALUES(date_update)
     `;
 
-    // db.execute(sql, [transformed.asset_name, transformed.bid, transformed.ask, transformed.lot_size, transformed.date_update], (err) => {
-    //     if (err) return console.error('DB error:', err);
+    db.execute(sql, [transformed.asset_name, transformed.bid, transformed.ask, transformed.lot_size, transformed.date_update], (err) => {
+        if (err) return console.error('DB error:', err);
 
-    //     // --- Логирование --- надо ли?
-    //     const logSql = `INSERT INTO log (action_name, date_created, user_id) VALUES (?, ?, ?)`;
-    //     db.execute(logSql, [`Asset ${transformed.asset_name} updated`, now, userId], (logErr) => {
-    //         if (logErr) console.error('Log error:', logErr);
-    //     });
-    // });
+        // --- Логирование --- надо ли?
+        // const logSql = `INSERT INTO log (action_name, date_created, user_id) VALUES (?, ?, ?)`;
+        // db.execute(logSql, [`Asset ${transformed.asset_name} updated`, now, userId], (logErr) => {
+        //     if (logErr) console.error('Log error:', logErr);
+        // });
+    });
 
     // --- Отправка на фронт ---
     const nowMs = Date.now();

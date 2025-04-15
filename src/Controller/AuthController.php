@@ -3,23 +3,18 @@
 namespace App\Controller;
 
 use App\Entity\User;
-use App\Entity\Log;
 use App\Form\RegistrationFormType;
 use App\Repository\UserRepository;
 use App\Security\LoginFormAuthenticator;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Security\Http\Authentication\UserAuthenticatorInterface;
-use Symfony\Component\Security\Http\FirewallMapInterface;
 use App\Service\LoggerService;
 
 class AuthController extends AbstractController
@@ -80,9 +75,9 @@ class AuthController extends AbstractController
 
             if (count($errors) > 0) {
                 foreach ($errors as $error) {
-                    echo $error->getMessage();
+                    $this->addFlash('login_error', $error->getMessage());
                 }
-                // return;
+                return $this->redirectToRoute('app_login_register');
             }
 
             $em->persist($user);
@@ -105,7 +100,7 @@ class AuthController extends AbstractController
         return match ($role) {
             'ROLE_ADMIN' => 'admin_dashboard',
             'ROLE_REP' => 'agent_dashboard',
-            default => 'user_dashboard',
+            'ROLE_USER' => 'user_dashboard',
         };
     }
 
@@ -119,33 +114,19 @@ class AuthController extends AbstractController
         );
     }
 
-    #[Route('/login', name: 'app_login', methods: ['POST'])]
-    public function login(
-        Request $request,
-        AuthenticationUtils $authenticationUtils
-    ): Response {
-        $error = $authenticationUtils->getLastAuthenticationError();
-        $lastUsername = $authenticationUtils->getLastUsername();
-    
-        if ($error) {
-            $this->addFlash('error', 'Invalid credentials.');
-            return $this->redirectToRoute('app_login_register');
-        }
-    
-        return $this->redirectToDashboard();
-    }
+    #[Route('/login', name: 'app_login')]
+    public function login(): void {
 
+    }
 
     #[Route('/logout', name: 'app_logout')]
     public function logout(): void
     {
         // This method can be blank - it will be intercepted by Symfony logout system
-        // Symfony перехватит этот маршрут, метод останется пустым
-        throw new \Exception('Этот метод может быть пустым – Symfony перехватывает logout автоматически.');
     }
 
     #[Route('/', name: 'app_login_register')]
-    public function index(Request $request): Response
+    public function index(Request $request, AuthenticationUtils $authenticationUtils): Response
     {
         $user = new User();
         $form = $this->createForm(RegistrationFormType::class, $user);

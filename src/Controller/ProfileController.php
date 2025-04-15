@@ -17,7 +17,6 @@ class ProfileController extends AbstractController
     public function index(UserInterface $user)
     {
         $userData = $this->getDoctrine()->getRepository(User::class)->find($user->getId());
-
         $trades = $this->getDoctrine()->getRepository(Trade::class)->findBy(['user' => $userData]);
         
         return $this->render('dashboard/user/profile.html.twig', [
@@ -27,14 +26,10 @@ class ProfileController extends AbstractController
         ]);
     }
 
-
     #[Route('/profile', name: 'profile', methods: ['GET'])]
     public function profile(UserInterface $user)
     {
-        // Получаем данные пользователя
         $userData = $this->getDoctrine()->getRepository(User::class)->find($user->getId());
-        
-        // Получаем открытые сделки пользователя
         $trades = $this->getDoctrine()->getRepository(Trade::class)->findBy(['user' => $userData, 'status' => 'open']);
         
         return $this->render('dashboard/user/profile.html.twig', [
