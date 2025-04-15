@@ -56,17 +56,22 @@ class AdminProfileController extends AbstractController
     
         $map = [];
         $nodes = [];
+        $orphans = [];
+
         foreach ($allUsers as $u) {
             $nodes[$u->getId()] = [
                 'user' => [
                     'id' => $u->getId(),
                     'username' => $u->getUsername(),
-                    'role' => $u->getRole()
+                    'role' => $u->getRole(),
+                    'agentNull' => $u->getAgent() ? false : true
                 ],
                 'children' => []
             ];
             if ($u->getAgent()) {
-                $map[$u->getAgent()->getId()][] = $u->getId(); // связь id → id
+                $map[$u->getAgent()->getId()][] = $u->getId(); 
+            } else {
+                $orphans[] = $u->getId(); 
             }
         }
     
@@ -91,7 +96,18 @@ class AdminProfileController extends AbstractController
             return $node;
         };
     
-        return [$buildTree($user->getId())]; // возвращаем массив с корнем
+        $root = $buildTree($user->getId());
+
+        // ADMIN only
+        if ($user->getRole() === 'ADMIN') {
+            foreach ($orphans as $orphanId) {
+                if (!in_array($orphanId, $visited, true) && $orphanId !== $user->getId()) {
+                    $root['children'][] = $nodes[$orphanId];
+                }
+            }
+        }
+
+        return [$root];
     }
 
 
@@ -239,16 +255,25 @@ class AdminProfileController extends AbstractController
         $user = $userRepo->find($userId);
         $agent = $userRepo->find($agentId);
         $redirect = new RedirectResponse($this->generateUrl('admin_dashboard'));
-
         
         if (!$user || !$agent) {
-            $this->addFlash($errorTitle, 'User or agent not found.');
+            $this->addFlash('users_tb_error', 'User or agent not found.');//we can't know which table here depens this error ..
             return $redirect;
         }
 
-        $isUser = $user->getRole() === 'USER';
+        $clientRole = $user->getRole();
+        $isUser = $clientRole === 'USER';
+
         $errorTitle = $isUser ? 'users_tb_error' : 'agent_tb_error';
         $successTitle = $isUser ? 'users_tb_success' : 'agents_tb_success';
+
+        if($agent->getAgent() === null) {
+            $this->addFlash($errorTitle, "Assignment denied: assign agent for [{$agentId}] before.");
+            return $redirect;
+        }
+
+
+
 
         if ($agent->getRole() === 'USER') {
             $this->addFlash($errorTitle, 'User can’t be in charge of an agent or other user.');
@@ -264,7 +289,7 @@ class AdminProfileController extends AbstractController
             $a = $a->getAgent();
         }
 
-        if($user->getAgent() && $user->getRole() !== 'USER'){
+        if($user->getAgent() && !$isUser){
             $allSubs = $this->getAllSubordinatesAgents($user);
             foreach ($allSubs as $sub) {
                 if ($sub->getId() === $agent->getId()) {
@@ -280,7 +305,7 @@ class AdminProfileController extends AbstractController
         $this->addFlash($successTitle, "Agent [ID: {$agent->getId()}] was successfully assigned to user {$user->getUsername()} [ID: {$user->getId()}].");
         $this->loggerService->logAction(
             $currentUser->getId(),
-            sprintf('Assigned agent ID %d to %s ID %d', $agent->getId(),  $user->getRole() === 'REP' ? 'agent' : 'user', $user->getId())
+            sprintf('Assigned agent ID %d to %s ID %d', $agent->getId(),  $isUser ? 'user' : 'agent', $user->getId())
         );
         return $redirect;
     }
