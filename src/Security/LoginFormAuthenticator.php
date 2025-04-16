@@ -66,8 +66,8 @@ class LoginFormAuthenticator extends AbstractLoginFormAuthenticator
 
         $role = $user->getRoles()[0];
         $routeMap = [
-            'ROLE_ADMIN' => 'admin_dashboard',
-            'ROLE_REP' => 'agent_dashboard',
+            'ROLE_ADMIN' => 'role_dashboard',
+            'ROLE_REP' => 'role_dashboard',
             'ROLE_USER' => 'user_dashboard',
         ];
     
