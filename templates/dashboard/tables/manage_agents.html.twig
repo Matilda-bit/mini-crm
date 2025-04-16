@@ -1,9 +1,9 @@
 
 
-<h2>Manage Agents</h2>
+<h2 id="manage-agents">Manage Agents</h2>
 
 {% include 'components/flash_messages.html.twig' with {
-    'error': 'agent_tb_error',
+    'error': 'agents_tb_error',
     'success': 'agents_tb_success'
 } %}
 
@@ -49,7 +49,7 @@
                         {% endif %}
                     </td>
                     <td>
-                        <form method="POST" action="{{ path(route ~ '_assign_agent', {'userId': agent.id}) }}" onsubmit="return validateForm(this)">
+                        <form method="POST" action="{{ path(route ~ '_assign_agent', {'userId': agent.id, 'tableName' : 'agents_tb' }) }}" onsubmit="return validateForm(this)">
                             <select name="agent_id" class="form-control">
                                 {% for otherAgent in agents %}
                                     {% if otherAgent.id != agent.id %} 

@@ -62,42 +62,22 @@ class AdminProfileController extends AbstractController
     public function assignAgent(Request $request, UserInterface $currentUser): RedirectResponse
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
-        
+
         $clientId = $request->request->get('user_id');
         $agentId = $request->request->get('agent_id');
-
-        $client = $this->userRepository->find($userId);
-        $agent = $this->userRepository->find($agentId);
-        
+        $tableName = $request->query->get('tableName');//agents_tb or users_tb
         $referer = $request->headers->get('referer') ?? $this->generateUrl('admin_dashboard'); // to prevent error 500
 
-        if (!$client) {
-            $this->addFlash('agents_tb_error', 'User not found.');
-            return $this->redirect($referer . '#manage-agents'); 
-        }
-
-        $isUser = $client->getRole() === 'USER';
-        $errorTitle = $isUser ? 'users_tb_error' : 'agents_tb_error';
-        $successTitle = $isUser ? 'users_tb_success' : 'agents_tb_success';
-
-        if (!$agent) {
-            if($isUser) {
-                $this->addFlash($errorTitle, 'Agent not found.');
-                return $this->redirect($referer . '#manage-users');
-            } else {
-                $this->addFlash($errorTitle, 'Agent not found.');
-                return $this->redirect($referer . '#manage-agents');
-            }
-        }
 
         try {
-            $message = $this->agentAssignmentService->assignAgent($client, $agent);
-            $this->addFlash($successTitle, $message);
+            $message = $this->agentAssignmentService->assignAgent($clientId, $agentId);
+
+            $this->addFlash(($tableName . '_success'), $message);
         } catch (\RuntimeException $e) {
-            $this->addFlash($errorTitle, $e->getMessage());
+            $this->addFlash(($tableName . '_error'), $e->getMessage());
         }
 
-        return $this->redirect($referer . ($isUser ? '#manage-users' : '#manage-agents'));
+        return $this->redirect($referer . (($tableName === 'users_tb') ? '#manage-users' : '#manage-agents'));
     }
 
     #[Route('/open-trade', name: 'open_trade', methods: ['POST'])]

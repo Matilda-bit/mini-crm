@@ -4,7 +4,7 @@
     'error': 'users_tb_error',
     'success': 'users_tb_success'
 } %}
-<h2>Manage Users</h2>
+<h2 id="manage-users">Manage Users</h2>
 
 {% if users is not empty %}
 
@@ -46,7 +46,7 @@
                     {% endif %}
                 </td>
                 <td>
-                    <form method="POST" action="{{ path(route ~ '_assign_agent', {'userId': user.id}) }}">
+                    <form method="POST" action="{{ path(route ~ '_assign_agent', {'userId': user.id, 'tableName' : 'users_tb' }) }}">
                         <select name="agent_id" class="form-control">
                             {% for agent in agents %}
                                 <option value="{{ agent.id }}" {% if u.agent and agent.id == u.agent.id %}selected{% endif %}>
