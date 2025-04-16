@@ -27,7 +27,9 @@
                 <th>Close</th>
                 <th>Status</th>
                 <th>PNL</th>
-                <th>Actions</th>
+                {% if role != 'USER' %}
+                    <th>Actions</th>
+                {% endif %}
             </tr>
         </thead>
         <tbody>
@@ -41,19 +43,17 @@
                     <td>{{ trade.closeRate ?: '---' }}</td>
                     <td>{{ trade.status }}</td>
                     <td>{{ trade.pnl }}</td>
-                    <td>
-                        {% if trade.status == 'open' %}
-                            {% if role != 'USER' %}
-                                <form method="POST" action="{{ path(route ~ '_close_trade', {'tradeId': trade.id}) }}">
+                    {% if role != 'USER' %}
+                        <td>
+                            {% if trade.status == 'open' %}
+                                <form method="POST" action="{{ path('role_close_trade', {'tradeId': trade.id}) }}">
                                     <button type="submit">Close</button>
                                 </form>
                             {% else %}
                                 ---
                             {% endif %}
-                        {% else %}
-                            ---
-                        {% endif %}
-                    </td>
+                        </td>
+                    {% endif %}
                 </tr>
             {% endfor %}
         </tbody>

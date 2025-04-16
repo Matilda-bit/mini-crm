@@ -1,0 +1,68 @@
+{# templates/dashboard/dashboard.html.twig #}
+
+{% extends 'base.html.twig' %}
+
+{% block content %}
+    {% include 'dashboard/user_info.html.twig' with {'user': user} %}
+
+    {% include 'dashboard/hierarchyTree/hierarchy_view.html.twig' with {'rep': rep, 'isRoot': isRoot} %}
+
+    {% include 'dashboard/tables/users_agents_table.html.twig' with {
+        records: users,
+        type: 'user',
+        agents: agents,
+        tableName: 'users_tb',
+        current_user_id: app.user.id
+    } only %}
+
+    {% include 'dashboard/tables/users_agents_table.html.twig' with {
+        records: agents,
+        type: 'agent',
+        agents: agents,
+        tableName: 'agents_tb',
+        current_user_id: app.user.id
+    } only %}
+
+    {% include 'dashboard/trade/_trade_table.html.twig' with {'trades': trades, 'role': user.role} %}
+    {% include 'dashboard/trade/_trade_form.html.twig' with {'users': users, 'is_agent': true,} %}
+    {% include 'dashboard/tables/_assets_view.html.twig' %}
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+
+    <script>
+        $(document).ready(function() {
+            const agentsTable = $('#agentsTable').DataTable({
+                dom: 'lrtip',
+                searching: true
+            });
+
+            const usersTable = $('#usersTable').DataTable({
+                dom: 'lrtip',
+                searching: true
+            });
+
+            $('#customSearch').on('keyup', function() {
+                const selectedColumn = $('#columnSelect').val();
+                const value = this.value;
+
+                if (selectedColumn === 'all') {
+                    agentsTable.search(value).draw();
+                    usersTable.search(value).draw();
+                } else {
+                    agentsTable.search('').columns().search('');
+                    usersTable.search('').columns().search('');
+                    agentsTable.column(selectedColumn).search(value).draw();
+                    usersTable.column(selectedColumn).search(value).draw();
+                }
+            });
+
+            $('#columnSelect').on('change', function() {
+                $('#customSearch').trigger('keyup');
+            });
+
+            $('#tradesTable').DataTable();
+        });
+    </script>
+{% endblock %}

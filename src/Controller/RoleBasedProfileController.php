@@ -43,15 +43,16 @@ class RoleBasedProfileController extends AbstractController
         $trades = $this->tradeService->getAllTradesForUserAndSubordinates($user, $users);
         $repHierarchy = $this->hierarchyService->buildHierarchyTree($user);
 
-        $template = $isAdmin ? '/dashboard/admin/admin.html.twig' : '/dashboard/agent/agent.html.twig';
+        $template = '/dashboard/dashboard.html.twig';
 
         return $this->render($template, [
-            'controller_name' => 'RoleBasedProfileController',
             'user' => $user,
-            'trades' => $trades,
+            'rep' => $repHierarchy,
             'users' => $users,
             'agents' => $agents,
-            'rep' => $repHierarchy,
+            'trades' => $trades,
+            'route' => $isAdmin ? 'admin' : 'rep',
+            'isRoot' => $isAdmin,
         ]);
     }
 
@@ -84,7 +85,7 @@ class RoleBasedProfileController extends AbstractController
     public function openTrade(Request $request, UserInterface $user): RedirectResponse
     {
         if (!$this->isGranted('ROLE_ADMIN') && !$this->isGranted('ROLE_REP')) {
-            throw new AccessDeniedException('Access denied');
+            throw new AccessDeniedException('Access denied1');
         }
 
         $this->tradeService->handleTrade($request, $user);

@@ -1,0 +1,72 @@
+{# /dashboard/tables/users_agents_table.html.twig #}
+
+<h2 id="manage-users">Manage {{ type  == 'user' ? 'Users' : 'Agents'}}</h2>
+
+{% include 'components/flash_messages.html.twig' with {
+    'error': type ~ '_tb_error',
+    'success': type ~ '_tb_success'
+} %}
+
+{% if records is not empty %}
+
+    <div style="margin-bottom: 10px;">
+        <select id="columnSelect" style="padding: 5px;">
+            <option value="all">Search All Columns</option>
+            <option value="0">ID</option>
+            <option value="1">Username</option>
+            <option value="3">Date Created</option>
+            <option value="4">Agent ID</option>
+        </select>
+
+        <input type="text" id="customSearch" placeholder="Search..." style="padding: 5px;">
+    </div>
+
+    <table class="display" id="{{ type ~ 'sTable' }}">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Date Created</th>
+                <th>Agent ID</th>
+                <th>Assigned Agent</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in records %}
+                {% if type != 'agent' or record.id != current_user_id %}
+                    <tr>
+                        <td>{{ record.id }}</td>
+                        <td>{{ record.username }}</td>
+                        <td>{{ record.role }}</td>
+                        <td>{{ record.dateCreated|date('Y-m-d') }}</td>
+                        <td>
+                            {% if record.agent %}
+                                {{ record.agent.id }}
+                            {% else %}
+                                <span style="color: red;">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="POST" action="{{ path('role_assign_agent', {'userId': record.id, 'tableName': tableName}) }}" onsubmit="return validateForm(this)">
+                                <select name="agent_id" class="form-control">
+                                    {% for agent in agents %}
+                                        {% if type != 'agent' or agent.id != record.id %}
+                                            <option value="{{ agent.id }}" {% if record.agent and agent.id == record.agent.id %}selected{% endif %}>
+                                                {{ agent.username }} ({{ agent.id }})
+                                            </option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                                <input type="hidden" name="user_id" value="{{ record.id }}">
+                                <button type="submit">Assign</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p><em>No {{ type }}s found...</em></p>
+{% endif %}

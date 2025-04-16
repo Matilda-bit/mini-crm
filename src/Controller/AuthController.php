@@ -98,8 +98,8 @@ class AuthController extends AbstractController
     private function getRouteByRole(string $role): string
     {
         return match ($role) {
-            'ROLE_ADMIN' => 'admin_dashboard',
-            'ROLE_REP' => 'agent_dashboard',
+            'ROLE_ADMIN' => 'role_dashboard',
+            'ROLE_REP' => 'role_dashboard',
             'ROLE_USER' => 'user_dashboard',
         };
     }
