@@ -44,7 +44,7 @@
                     <td>
                         {% if trade.status == 'open' %}
                             {% if role != 'USER' %}
-                                <form method="POST" action="/close-trade/{{ trade.id }}">
+                                <form method="POST" action="{{ path(route ~ '_close_trade', {'tradeId': trade.id}) }}">
                                     <button type="submit">Close</button>
                                 </form>
                             {% else %}

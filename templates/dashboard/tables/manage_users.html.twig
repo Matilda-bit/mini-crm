@@ -1,10 +1,11 @@
 {# templates/dashboard/manage_users.html.twig #}
 
+<h2 id="manage-users">Manage Users</h2>
+
 {% include 'components/flash_messages.html.twig' with {
     'error': 'users_tb_error',
     'success': 'users_tb_success'
 } %}
-<h2 id="manage-users">Manage Users</h2>
 
 {% if users is not empty %}
 

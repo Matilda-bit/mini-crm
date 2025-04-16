@@ -7,9 +7,11 @@ namespace App\Service;
 use App\Entity\User;
 use App\Entity\Trade;
 use App\Entity\Asset;
+
 use App\Repository\TradeRepository;
-use Symfony\Component\Security\Core\User\UserInterface;
+use App\Repository\UserRepository;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -22,18 +24,14 @@ class TradeService
     const STATUS_CLOSED = 'closed'; 
 
 
-    private SessionInterface $session;
-    private AssetService $assetService;
-    private TradeRepository $tradeRepository;
-
-    public function __construct(SessionInterface $session, AssetService $assetService, TradeRepository $tradeRepository)
-    {
-        $this->session = $session;
-        $this->assetService = $assetService;
-        $this->tradeRepository = $tradeRepository;
-    }
-
-    public function handleTrade( Request $request, EntityManagerInterface $em, UserInterface $user)
+    public function __construct(
+        private SessionInterface $session,
+        private AssetService $assetService,
+        private TradeRepository $tradeRepository,
+        private EntityManagerInterface $em,
+    ) {}
+    
+    public function handleTrade( Request $request, UserInterface $user)
     {
 
         $referer = $request->headers->get('referer');
@@ -46,7 +44,7 @@ class TradeService
         $errorTitle = 'open_trade_error';
         $successTitle = 'open_trade_success';
 
-        $targetUser = $em->getRepository(User::class)->find($targetUserId); 
+        $targetUser = $this->em->getRepository(User::class)->find($targetUserId); 
         if (!$targetUser) {
             $this->session->getFlashBag()->add($errorTitle, 'User not found');
             return false;
@@ -72,7 +70,7 @@ class TradeService
 
         $trade = new Trade();
         $trade->setUser($targetUser);
-        $trade->setAgentId($user); // opened_by_agent_id / null
+        $trade->setAgentId($user); // opened_by_agent_id / null - set current user
         $trade->setPosition($position);//buy / sell
         $trade->setLotCount($lotCount);
         $trade->setStopLoss($sl ?: null);
@@ -83,10 +81,10 @@ class TradeService
         $trade->setUsedMargin($userMargin);
         $trade->setDateCreated(new \DateTime());
 
-        $em->persist($trade);
+        $this->em->persist($trade);
 
         try {
-            $em->flush();
+            $this->em->flush();
         } catch (\Throwable $e) {
             $this->session->getFlashBag()->add($errorTitle, 'Unexpected error. Please try again.');
             return false;
@@ -97,18 +95,17 @@ class TradeService
 
     }
 
-    public function closeTrade(int $id, Request $request, EntityManagerInterface $em)
+    public function closeTrade(int $id, Request $request)
     {
         $referer = $request->headers->get('referer');
-        $trade = $em->getRepository(Trade::class)->find($id);
+        $trade = $this->em->getRepository(Trade::class)->find($id);
 
         if (!$trade) {
             $this->session->getFlashBag()->add('close_trade_error', 'Trade not found.');
             return false;
         }
 
-        // Получаем актив, связанный с сделкой
-        $asset = $this->assetService->getAssetByName('BTC/USD'); // или передаем параметр актива в зависимости от логики
+        $asset = $this->assetService->getAssetByName('BTC/USD'); 
         if (!$asset) {
             $this->session->getFlashBag()->add('close_trade_error', 'Asset not found.');
             return false;
@@ -140,7 +137,7 @@ class TradeService
         $oldTotalPnl = $user->getTotalPnl();
         $user->setTotalPnl($oldTotalPnl + $pnl);
 
-        $em->flush();
+        $this->em->flush();
 
         $this->session->getFlashBag()->add('close_trade_success', "Trade ID: [{$trade->getId()}] was successfully closed.");
 

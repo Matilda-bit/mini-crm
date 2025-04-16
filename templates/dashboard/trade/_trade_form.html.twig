@@ -11,7 +11,7 @@
 <button id="toggleTradeForm">Open New Trade</button>
 
 <div id="tradeFormContainer" style="display: none; margin-top: 20px;">
-    <form action="/open-trade" method="POST">
+    <form action="{{ path(route ~ '_open_trade') }}" method="POST">
          <!-- Выбор пользователя (только для агента) -->
         {% if is_agent %}
             <label for="target_user">User:</label>

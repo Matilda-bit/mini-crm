@@ -31,18 +31,11 @@ class HierarchyService
             }
         }
     
-        $agents = [];
+        $agents = [$user];
         $users = [];
         $queue = [$user];
         $visitedIds = [$user->getId()];
     
-        foreach ($orphans as $u) {
-            $uid = $u->getId();
-            if (!in_array($uid, $visitedIds, true)) {
-                $visitedIds[] = $uid;
-                $queue[] = $u;
-            }
-        }
     
         while (!empty($queue)) {
             $current = array_shift($queue);
@@ -65,7 +58,7 @@ class HierarchyService
             }
         }
     
-        if ($withNull) {
+        if ($user->getRole() === 'ADMIN') {
             foreach ($orphans as $u) {
                 if ($u->getRole() === 'REP' && !in_array($u, $agents, true)) {
                     $agents[] = $u;
