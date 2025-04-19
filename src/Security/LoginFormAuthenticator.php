@@ -57,6 +57,21 @@ class LoginFormAuthenticator extends AbstractLoginFormAuthenticator
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): Response
     {
         $user = $token->getUser();
+        $session = $request->getSession();
+
+        if ($user->getRole() === 'ADMIN') {
+            // Устанавливаем "бесконечную" сессию (например, 1 год)
+            $session->migrate(true); // новая сессия для безопасности
+            $params = session_get_cookie_params();
+            setcookie(session_name(), session_id(), [
+                'expires' => time() + 31536000, // 1 год
+                'path' => $params['path'],
+                'domain' => $params['domain'],
+                'secure' => $params['secure'],
+                'httponly' => $params['httponly'],
+                'samesite' => $params['samesite'] ?? 'Lax'
+            ]);
+        }
 
         if ($user instanceof User) {
             $user->setLoginTime(new \DateTime());
@@ -78,6 +93,7 @@ class LoginFormAuthenticator extends AbstractLoginFormAuthenticator
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): Response
     {
+        //here
         $request->getSession()->getFlashBag()->add('login_error', 'Invalid credentials.');
 
         return new RedirectResponse($this->router->generate('app_login_register'));

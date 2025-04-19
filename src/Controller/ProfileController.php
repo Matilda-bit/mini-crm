@@ -10,18 +10,27 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Core\User\UserInterface;
 //todo: refactor userController?
 
-#[IsGranted('ROLE_REP')]
+#[IsGranted('ROLE_USER')]
 class ProfileController extends AbstractController
 {
     #[Route('/user/dashboard', name: 'user_dashboard', methods: ['GET'])]
-    public function index(UserInterface $user)
+    public function index()
     {
-        $userData = $this->getDoctrine()->getRepository(User::class)->find($user->getId());
-        $trades = $this->getDoctrine()->getRepository(Trade::class)->findBy(['user' => $userData]);
-        
-        return $this->render('dashboard/user/profile.html.twig', [
-            'controller_name' => 'ProfileController',
-            'user' => $userData,
+        $user = $this->getUser();
+
+        if (!$user) {
+            $this->addFlash('login_error', 'Your session expired, please login again');
+            return $this->redirectToRoute('app_login_register');
+        }
+
+        $trades = $this->getDoctrine()->getRepository(Trade::class)->findBy(['user' => $user]);
+
+        $template = '/dashboard/user/profile.html.twig';
+
+        // dd($trades);
+
+        return $this->render($template, [
+            'user' => $user,
             'trades' => $trades,
         ]);
     }

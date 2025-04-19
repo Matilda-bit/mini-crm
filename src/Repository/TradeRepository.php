@@ -5,6 +5,7 @@
 namespace App\Repository;
 
 use App\Entity\Trade;
+use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -26,6 +27,21 @@ class TradeRepository extends ServiceEntityRepository
 
     public function findByUsers(array $users): array
     {
+        return $this->createQueryBuilder('t')
+            ->where('t.user IN (:users)')
+            ->setParameter('users', $users)
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function getAllForUserAndSubordinates(User $user, array $subordinates): array
+    {
+        if ($user->getRole() === 'ADMIN') {
+            return $this->findAll();
+        }
+
+        $users = array_merge([$user], $subordinates);
+
         return $this->createQueryBuilder('t')
             ->where('t.user IN (:users)')
             ->setParameter('users', $users)

@@ -1,13 +1,5 @@
 {# templates/dashboard/trade/_trade_table.html.twig #}
 
-{% block javascripts %}
-    <script>
-        $(document).ready(function() {
-            $('#tradesTable').DataTable();
-        });
-    </script>
-{% endblock %}
-
 {% block content %}
     <h2>Trades</h2>
 
@@ -42,7 +34,13 @@
                     <td>{{ trade.entryRate }}</td>
                     <td>{{ trade.closeRate ?: '---' }}</td>
                     <td>{{ trade.status }}</td>
-                    <td>{{ trade.pnl }}</td>
+                    <td id="pnl-{{ trade.id }}" >
+                        {% if trade.status == 'open' %}
+                            0.00
+                        {% else %}
+                            {{ trade.pnl }}
+                        {% endif %}
+                    </td>
                     {% if role != 'USER' %}
                         <td>
                             {% if trade.status == 'open' %}

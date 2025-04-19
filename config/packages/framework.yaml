@@ -11,6 +11,8 @@ framework:
         cookie_secure: auto
         cookie_samesite: lax
         storage_factory_id: session.storage.factory.native
+        cookie_lifetime: 600  # 600 sec = 10 min
+        gc_maxlifetime: 600
 
     #esi: true
     #fragments: true

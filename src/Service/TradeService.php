@@ -17,12 +17,6 @@ use Doctrine\ORM\EntityManagerInterface;
 
 class TradeService
 {
-    const STATUS_OPEN = 'open';
-    const STATUS_WON = 'won';
-    const STATUS_LOSE = 'lose';
-    const STATUS_TIE = 'tie';
-    const STATUS_CLOSED = 'closed'; 
-
 
     public function __construct(
         private SessionInterface $session,
@@ -45,41 +39,13 @@ class TradeService
         $successTitle = 'open_trade_success';
 
         $targetUser = $this->em->getRepository(User::class)->find($targetUserId); 
-        if (!$targetUser) {
-            $this->session->getFlashBag()->add($errorTitle, 'User not found');
-            return false;
-        }
-
         $asset = $this->assetService->getAssetByName($assetName);
-        if (!$asset) {
-            $this->session->getFlashBag()->add($errorTitle, 'Asset not found');
+
+        if (!$this->validateTradeRequest($targetUser, $asset, $errorTitle)) {
             return false;
         }
+        $trade = $this->createTrade($targetUser, $user, $position, $lotCount, $sl ?: null, $tp ?: null, $asset);
 
-
-        $entryRate = $this->assetService->getCurrentRate($asset, $position);
-
-        $lotSize = 10;
-        $userCurrency = $targetUser->getCurrency();
-        $tradeSize = $lotSize * $lotCount;
-
-        $conversionRate = $this->assetService->getConversionRate($asset, $userCurrency); 
-
-        $pipValue = $tradeSize * 0.01 * $conversionRate;
-        $userMargin = $tradeSize * 0.1 * $conversionRate;
-
-        $trade = new Trade();
-        $trade->setUser($targetUser);
-        $trade->setAgentId($user); // opened_by_agent_id / null - set current user
-        $trade->setPosition($position);//buy / sell
-        $trade->setLotCount($lotCount);
-        $trade->setStopLoss($sl ?: null);
-        $trade->setTakeProfit($tp ?: null);
-        $trade->setStatus(Trade::STATUS_OPEN);
-        $trade->setEntryRate($entryRate);
-        $trade->setTradeSize($tradeSize);
-        $trade->setUsedMargin($userMargin);
-        $trade->setDateCreated(new \DateTime());
 
         $this->em->persist($trade);
 
@@ -92,8 +58,56 @@ class TradeService
 
         $this->session->getFlashBag()->add($successTitle, 'Trade successfully opened');
         return true;
-
     }
+
+    private function validateTradeRequest(?User $targetUser, ?Asset $asset, string $errorTitle): bool
+    {
+        if (!$targetUser) {
+            $this->session->getFlashBag()->add($errorTitle, 'User not found');
+            return false;
+        }
+
+        if (!$asset) {
+            $this->session->getFlashBag()->add($errorTitle, 'Asset not found');
+            return false;
+        }
+
+        return true;
+    }
+
+    private function createTrade(
+        User $targetUser,
+        UserInterface $agent,
+        string $position,
+        float $lotCount,
+        ?float $sl,
+        ?float $tp,
+        Asset $asset
+    ): Trade {
+        $lotSize = 10;
+        $tradeSize = $lotSize * $lotCount;
+        $conversionRate = $this->assetService->getConversionRate($asset, $targetUser->getCurrency());
+        $pipValue = $tradeSize * 0.01 * $conversionRate;
+        $userMargin = $tradeSize * 0.1 * $conversionRate;
+    
+        $entryRate = $this->assetService->getCurrentRate($asset, $position);
+    
+        $trade = new Trade();
+        $trade->setUser($targetUser);
+        $trade->setAgentId($agent);
+        $trade->setPosition($position);
+        $trade->setLotCount($lotCount);
+        $trade->setStopLoss($sl);
+        $trade->setTakeProfit($tp);
+        $trade->setStatus(Trade::STATUS_OPEN);
+        $trade->setEntryRate($entryRate);
+        $trade->setTradeSize($tradeSize);
+        $trade->setUsedMargin($userMargin);
+        $trade->setDateCreated(new \DateTime());
+    
+        return $trade;
+    }
+    
 
     public function closeTrade(int $id, Request $request)
     {
@@ -111,20 +125,10 @@ class TradeService
             return false;
         }
 
-        // Текущая цена для расчета прибыли
         $currentRate = $this->assetService->getCurrentRate($asset, $trade->getPosition());
-
-        // Вычисление прибыли или убытка (P&L)
-        $pnl = 0;
-        if ($trade->getPosition() === Trade::BUY) {
-            $pnl = ($currentRate - $trade->getEntryRate()) * $trade->getLotCount() * 0.01;
-        } else {
-            $pnl = ($trade->getEntryRate() - $currentRate) * $trade->getLotCount() * 0.01;
-        }
-
-        // Вычисление маржи
-        $userCurrency = $trade->getUser()->getCurrency();
-        $margin = $trade->getTradeSize() * 0.1 * $currentRate;
+        $conversionRate = $this->assetService->getConversionRate($asset, $trade->getUser()->getCurrency());
+        $pnl = $this->calculatePnl($trade, $currentRate, $conversionRate);
+        $margin = $this->calculateMargin($trade, $currentRate, $conversionRate);
 
         // Обновляем данные сделки
         $trade->setStatus(Trade::STATUS_CLOSED);
@@ -143,16 +147,34 @@ class TradeService
 
         return false;
     }
-
     public function getAllTradesForUserAndSubordinates(UserInterface $user, array $subordinates): array
     {
-        if ($user->getRole() === 'ADMIN') {
-            return $this->tradeRepository->findAll();
-        }
-
-        $allUsers = array_merge([$user], $subordinates);
-        return $this->tradeRepository->findByUsers($allUsers);
+        return $this->tradeRepository->getAllForUserAndSubordinates($user, $subordinates);
     }
+
+    private function calculatePipValue(Trade $trade, float $conversionRate): float
+    {
+        $lotSize = 10; // всегда 10
+        return $lotSize * $trade->getLotCount() * 0.01 * $conversionRate;
+    }
+    
+    private function calculatePnl(Trade $trade, float $currentRate, float $conversionRate): float
+    {
+        $pipValue = $this->calculatePipValue($trade, $conversionRate);
+    
+        if ($trade->getPosition() === Trade::BUY) {
+            return ($currentRate - $trade->getEntryRate()) * $pipValue * 100;
+        }
+    
+        return ($trade->getEntryRate() - $currentRate) * $pipValue * 100;
+    }
+    
+    private function calculateMargin(Trade $trade, float $currentRate, float $conversionRate): float
+    {
+        $tradeSize = 10 * $trade->getLotCount(); // lot size * lot count
+        return $tradeSize * 0.1 * $conversionRate * $currentRate;
+    }
+    
 
 
 }

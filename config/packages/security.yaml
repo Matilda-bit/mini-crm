@@ -3,37 +3,39 @@ security:
     # https://symfony.com/doc/current/security.html#registering-the-user-hashing-passwords
     password_hashers:
         App\Entity\User:
-            algorithm: bcrypt  # Используем bcrypt для хеширования паролей
-            cost: 12           # Стандартное значение для bcrypt, можно увеличить для большей безопасности
-            # Вы также можете использовать argon2i или argon2id
-            # algorithm: argon2i
-            # time_cost: 4
-            # memory_cost: 1024
+            algorithm: bcrypt 
+            cost: 12           
 
     # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
     providers:
-        users_in_database:  # Настроим провайдер для загрузки пользователей из базы данных
+        users_in_database:  
             entity:
                 class: App\Entity\User
-                property: username  # Идентификация пользователя по имени пользователя
+                property: username  
 
     firewalls:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
         main:
+            pattern: ^/
             lazy: true
-            provider: users_in_database  # Используем наш провайдер для загрузки пользователей из базы данных
+            provider: users_in_database 
             custom_authenticators:
-            - App\Security\LoginFormAuthenticator
+                - App\Security\LoginFormAuthenticator
             entry_point: App\Security\LoginFormAuthenticator
-            # Активируем различные способы аутентификации
 
             logout:
                 path: app_logout
                 target: app_login_register
-                invalidate_session: true 
-    # Управление доступом
+                invalidate_session: true
+
+            remember_me:
+                secret: '%kernel.secret%'
+                lifetime: 1800
+                path: /
+                always_remember_me: true  
+    
     access_control:
         - { path: ^/assign-agent, roles: [ROLE_ADMIN, ROLE_REP] }
         - { path: ^/open-trade, roles: [ROLE_ADMIN, ROLE_REP] }

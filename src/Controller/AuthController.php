@@ -20,19 +20,12 @@ use App\Service\LoggerService;
 class AuthController extends AbstractController
 {
 
-    private $authenticator;
-    private UserAuthenticatorInterface $userAuthenticator;
-
     public function __construct(
-        UserAuthenticatorInterface $userAuthenticator,
-        LoginFormAuthenticator $authenticator,
-        LoggerService $loggerService
+        private UserAuthenticatorInterface $userAuthenticator,
+        private LoginFormAuthenticator $authenticator,
+        private LoggerService $loggerService
     ) {
-        $this->userAuthenticator = $userAuthenticator;
-        $this->authenticator = $authenticator;
-        $this->loggerService = $loggerService;
     }
-
 
     #[Route('/register', name: 'app_register', methods: ['POST', 'GET'])]
     public function register(
@@ -116,7 +109,7 @@ class AuthController extends AbstractController
 
     #[Route('/login', name: 'app_login')]
     public function login(): void {
-
+    
     }
 
     #[Route('/logout', name: 'app_logout')]
