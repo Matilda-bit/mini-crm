@@ -142,19 +142,19 @@ composer install
 ```
 If you don’t have Symfony CLI installed, you can install it from Symfony CLI docs.
 
-6. 📋 Run Database Migrations
+### 6. 📋 Run Database Migrations
 ```bash
 php bin/console doctrine:migrations:migrate
 ```
 
-7. 🔥 Start Symfony Server
+### 7. 🔥 Start Symfony Server
 
 ```bash
 symfony server:stop
 symfony server:start
 ```
 
-8. 🔌 Start WebSocket Binance Listener
+### 8. 🔌 Start WebSocket Binance Listener
 
 In a second terminal:
 ```bash 
