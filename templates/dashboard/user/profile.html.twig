@@ -23,7 +23,6 @@
      $(document).ready(function() {
             $('#tradesTable').DataTable();
 
-            //const socket = new WebSocket('wss://127.0.0.1:8080');
             const socket = window.tradeSocket ? window.tradeSocket.socket : null;
             console.log('dashboard/trade/_trade_table.html.twig');
             
