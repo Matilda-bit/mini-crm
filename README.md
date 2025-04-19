@@ -68,7 +68,7 @@ To run this project locally:
 git clone https://github.com/Matilda-bit/mini-crm.git
 cd mini-crm
 ```
-2. 📦 Install Node.js Dependencies
+### 2. 📦 Install Node.js Dependencies
 
 ```bash
 cd node-services
@@ -80,40 +80,67 @@ exact versions specified in package-lock.json:
 npm ci
 ```
 
-3. 🐘 Install PHP & Symfony Dependencies
+## generate ssl key, create new folder ssl in mini-crm/node-services/ssl/ => for cert.pem & key.pem and run here: 
+```bash
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
+```
+
+Example:
+```
+Country Name (2 letter code) [AU]:IL
+State or Province Name (full name) [Some-State]:Tel Aviv
+Locality Name (eg, city) []:Tel Aviv
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:devYard
+Organizational Unit Name (eg, section) []:
+Common Name (e.g. server FQDN or YOUR name) []:127.0.0.1
+Email Address []:
+```
+
+### 3. 🧪 Configure Environment Variables
+
+Create a .env file in the project root:
+
+```env
+APP_ENV=dev
+APP_SECRET=your_app_secret_here
+DATABASE_URL="mysql://root:<password>@127.0.0.1:3306/mini_crm?serverVersion=8&charset=utf8mb4"
+MESSENGER_TRANSPORT_DSN=doctrine://default?auto_setup=0
+
+# Node.js Service
+DB_HOST=127.0.0.1
+DB_USER=root
+DB_PASSWORD=<password>
+DB_NAME=mini_crm
+APP_DEBUG=true
+```
+
+
+
+### 4. 🛢️ Setup MySQL Database
+
+Install MySQL (version 8+ recommended)
+
+Create a database:
+
+```bash
+mysql -u root -p
+```
+
+```sql
+CREATE DATABASE mini_crm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+or
+```bash
+php bin/console doctrine:database:create
+```
+
+### 5. 🐘 Install PHP & Symfony Dependencies
 From the root of the project:
 
 ```bash
 composer install
 ```
 If you don’t have Symfony CLI installed, you can install it from Symfony CLI docs.
-
-4. 🛢️ Setup MySQL Database
-
-Install MySQL (version 8+ recommended)
-
-Create a database:
-
-```sql
-CREATE DATABASE mini_crm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-5. 🧪 Configure Environment Variables
-
-Create a .env.local file in the project root:
-
-```env
-APP_ENV=dev
-APP_SECRET=your_app_secret_here
-DATABASE_URL="mysql://<username>:<password>@127.0.0.1:3306/mini_crm?serverVersion=8&charset=utf8mb4"
-
-# Node.js Service
-DB_HOST=127.0.0.1
-DB_USER=root
-DB_PASSWORD=MyP@ssw0rd123
-DB_NAME=mini_crm
-APP_DEBUG=true
-```
 
 6. 📋 Run Database Migrations
 ```bash
