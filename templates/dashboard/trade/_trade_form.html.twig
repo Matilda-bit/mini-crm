@@ -82,6 +82,7 @@
     </form>
 </div>
 
+<script src="/js/trade_socket.js"></script>
 <script>
     document.getElementById('toggleTradeForm').addEventListener('click', () => {
         const form = document.getElementById('tradeFormContainer');
@@ -95,13 +96,26 @@
     const conversionRate = 0.9215; // USD to EUR ONLYYY!!!
     const marketData = {};
 
-    const socket = new WebSocket('wss://127.0.0.1:8080');
+    const socket = window.tradeSocket ? window.tradeSocket.socket : null;
 
-    socket.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        marketData[data.asset_name] = data;
-        updateRatesFromAsset(); 
-    };
+    if (socket && socket.addEventListener) {
+        socket.addEventListener('message', function(event) {
+            let data;
+            try {
+                data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+            } catch (e) {
+                console.error("Error parsing WS message:", event.data);
+                return;
+            }
+
+            if (data.asset_name) {
+                marketData[data.asset_name] = data;
+                updateRatesFromAsset(); 
+            }
+        });
+    } else {
+        console.error("Socket is not ready or undefined:",  window.tradeSocket);
+    }
 
     document.getElementById('lot_count').addEventListener('input', calculateValues);
     document.getElementById('position').addEventListener('change', calculateValues);
@@ -128,8 +142,10 @@
         if (assetData) {
             bid = assetData.bid;
             ask = assetData.ask;
-            document.getElementById('bidRate').textContent = bid.toFixed(2);
-            document.getElementById('askRate').textContent = ask.toFixed(2);
+            if (document.getElementById('bidRate') && document.getElementById('askRate')) {
+                document.getElementById('bidRate').textContent = bid.toFixed(2);
+                document.getElementById('askRate').textContent = ask.toFixed(2);
+            }
             calculateValues();
         }
     }

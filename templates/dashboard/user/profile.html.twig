@@ -14,12 +14,17 @@
   
 {% block javascripts %}
     {{ parent() }}
+    {% if not app.session.get('scripts_loaded') %}
+        <script src="/js/trade_socket.js"></script>
+        {% do app.session.set('scripts_loaded', true) %}
+    {% endif %}
 
     <script>
      $(document).ready(function() {
             $('#tradesTable').DataTable();
 
-            const socket = new WebSocket('wss://127.0.0.1:8080');
+            //const socket = new WebSocket('wss://127.0.0.1:8080');
+            const socket = window.tradeSocket ? window.tradeSocket.socket : null;
             console.log('dashboard/trade/_trade_table.html.twig');
             
             const openTrades = {
@@ -52,21 +57,25 @@
                 return parseFloat(pnl.toFixed(2));
             }
 
-            socket.onmessage = function(event) {
-                const assetData = JSON.parse(event.data);
-                for (const tradeId in openTrades) {
-                    const trade = openTrades[tradeId];
-                    if (assetData.asset_name === 'BTC/USD') {
-                        const pnl = calculatePnl(trade, assetData);
-                        const cell = document.getElementById('pnl-' + tradeId);
-                        if (cell) {
-                            cell.textContent = pnl;
-                            cell.style.transition = 'color 0.3s ease';
-                            cell.style.color = pnl < 0 ? 'red' : pnl > 0 ? 'green' : 'black';
+            if (socket && socket.addEventListener) {
+                socket.addEventListener('message', function(event) {
+                    const assetData = JSON.parse(event.data);
+                    for (const tradeId in openTrades) {
+                        const trade = openTrades[tradeId];
+                        if (assetData.asset_name === 'BTC/USD') {
+                            const pnl = calculatePnl(trade, assetData);
+                            const cell = document.getElementById('pnl-' + tradeId);
+                            if (cell) {
+                                cell.textContent = pnl;
+                                cell.style.transition = 'color 0.3s ease';
+                                cell.style.color = pnl < 0 ? 'red' : pnl > 0 ? 'green' : 'black';
+                            }
                         }
                     }
-                }
-            };
+                });
+            } else {
+                console.error("Socket is not ready or undefined.");
+            }
         });
     </script>
     

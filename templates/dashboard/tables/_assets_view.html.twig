@@ -19,6 +19,12 @@
         <tbody></tbody>
     </table>
 </div>
+
+    {% if not app.session.get('scripts_loaded') %}
+        <script src="/js/trade_socket.js"></script>
+        {% do app.session.set('scripts_loaded', true) %}
+    {% endif %}
+{# <script src="/js/trade_socket.js"></script> #}
 <script>
     let dataTable;
 
@@ -35,49 +41,42 @@
             ]
         });
 
-        const socket = new WebSocket('wss://127.0.0.1:8080');
-
-        socket.onopen = () => {
-            console.log('WebSocket connection established');
-        };
-
-        socket.onerror = error => {
-            console.error('WebSocket Error:', error);
-        };
-
-        socket.onclose = () => {
-            console.log('WebSocket connection closed');
-        };
+        const socket = window.tradeSocket ? window.tradeSocket.socket : null;
 
         let logCount = 0;
 
-        socket.onmessage = (event) => {
-            let data;
 
-            try {
-                data = JSON.parse(event.data);
-            } catch (err) {
-                console.error('Invalid JSON:', event.data);
-                return;
-            }
+        if (socket && socket.addEventListener) {
+            socket.addEventListener('message', function(event) {
+                let data;
 
-            if (logCount < 5) {
-                console.log('WS received:', data);
-                logCount++;
-            }
+                try {
+                    data = JSON.parse(event.data);
+                } catch (err) {
+                    console.error('Invalid JSON:', event.data);
+                    return;
+                }
 
-            if (Array.isArray(data)) {
-                updateAssetsTable(data);
-            } else if (data.asset_name) {
-                updateAssetsTable([data]);
-            } else if (data.message) {
-                console.log('Message:', data.message);
-            } else if (data.update) {
-                console.log('Update:', data.update);
-            } else {
-                console.warn('Unexpected data format:', data);
-            }
-        };
+                if (logCount < 5) {
+                    console.log('WS received:', data);
+                    logCount++;
+                }
+
+                if (Array.isArray(data)) {
+                    updateAssetsTable(data);
+                } else if (data.asset_name) {
+                    updateAssetsTable([data]);
+                } else if (data.message) {
+                    console.log('Message:', data.message);
+                } else if (data.update) {
+                    console.log('Update:', data.update);
+                } else {
+                    console.warn('Unexpected data format:', data);
+                }
+            });
+        } else {
+        console.error("Socket is not ready or undefined.");
+    }
     });
     const assetsMap = new Map();
 
