@@ -6,7 +6,7 @@ This project is a mini CRM application developed as part of a technical intervie
 
 - **👥 User & Agent Registration/Login**
   - Supports role-based access: `Admin`, `Rep`, and `User`
-  - Auto logout after 10 minutes
+  - Auto logout after 10 minutes (only for agents and users)
 
 - **🌿 Agent Hierarchy Management**
   - Assign agents to users or other agents
@@ -19,7 +19,7 @@ This project is a mini CRM application developed as part of a technical intervie
 
 - **📊 Open & Close Trades**
   - Users and agents can open trades with:
-    - Lot size and lot count
+    - Lot size(always 10) and lot count
     - SL (Stop Loss) and TP (Take Profit)
     - Live bid/ask-based calculations
   - Live profit/loss (PNL), pip value, and used margin computation
