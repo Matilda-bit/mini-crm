@@ -37,7 +37,7 @@ class AgentAssignmentService
             throw new \RuntimeException('Agent not found.');
         }
 
-        $agentRole = $agent->getAgent();
+        $agentRole = $agent->getRole();
 
         if ($agentRole === null) {
             throw new \RuntimeException("Assignment denied: please assign an agent to agent [{$agent->getId()}] first.");
