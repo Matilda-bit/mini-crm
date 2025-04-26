@@ -3,8 +3,8 @@
 <h2 id="manage-users">Manage {{ type  == 'user' ? 'Users' : 'Agents'}}</h2>
 
 {% include 'components/flash_messages.html.twig' with {
-    'error': type ~ '_tb_error',
-    'success': type ~ '_tb_success'
+    'error': type ~ 's_tb_error',
+    'success': type ~ 's_tb_success'
 } %}
 
 {% if records is not empty %}

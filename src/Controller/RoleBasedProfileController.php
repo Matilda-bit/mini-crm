@@ -69,7 +69,7 @@ class RoleBasedProfileController extends AbstractController
         $clientId = $request->request->get('user_id');
         $agentId = $request->request->get('agent_id');
         $tableName = $request->query->get('tableName');
-        $referer = $request->headers->get('referer') ?? $this->generateUrl($isAdmin ? 'role_dashboard' : 'role_dashboard');
+        $referer = $request->headers->get('referer') ?? $this->generateUrl('role_dashboard');
 
         try {
             $message = $this->agentAssignmentService->assignAgent($clientId, $agentId);
