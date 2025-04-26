@@ -88,15 +88,25 @@ class RoleBasedProfileController extends AbstractController
     }
 
     #[Route('/open-trade', name: 'role_open_trade', methods: ['POST'])]
-    public function openTrade(Request $request, UserInterface $user): RedirectResponse
+    public function openTrade(Request $request, UserInterface $user): Response
     {
         if (!$this->isGranted('ROLE_ADMIN') && !$this->isGranted('ROLE_REP')) {
-            throw new AccessDeniedException('Access denied1');
+            throw new AccessDeniedException('Access denied');
         }
 
-        $this->tradeService->handleTrade($request, $user);
-        $referer = $request->headers->get('referer') ?? $this->generateUrl('role_dashboard');
-        return $this->redirect($referer . '#open-trade');
+        try {
+            $this->tradeService->handleTrade($request, $user);
+    
+            return new JsonResponse([
+                'success' => true,
+                'message' => 'Trade successfully opened!'
+            ]);
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
+        }
     }
 
     #[Route('/close-trade/{tradeId}', name: 'role_close_trade', methods: ['POST'])]

@@ -2,17 +2,12 @@
 
 <h2 id="open-trade">Open Trade for a User</h2>
 
-
-{% include 'components/flash_messages.html.twig' with {
-    'error': 'open_trade_error',
-    'success': 'open_trade_success'
-} %}
+<script src="{{ asset('js/toast.js') }}"></script>
 
 <button id="toggleTradeForm">Open New Trade</button>
 
 <div id="tradeFormContainer" style="display: none; margin-top: 20px;">
-    <form action="{{ path('role_open_trade') }}" method="POST">
-         <!-- Выбор пользователя (только для агента) -->
+     <form id="tradeForm" method="POST">
         {% if is_agent %}
             <label for="target_user">User:</label>
             <select name="target_user" id="target_user" required>
@@ -26,58 +21,44 @@
             </select><br><br>
         {% endif %}
 
-        <!-- Название актива -->
         <label>Asset:</label>
         <select name="asset" id="asset" required>
             <option value="BTC/USD">BTC/USD</option>
             {# <option value="BTC/EUR">BTC/EUR</option> #}
         </select><br><br>
 
-        <!-- Bid/Ask Rate (from WebSocket) -->
         <label>Bid Rate:</label>
         <span id="bidRate">--</span> <br>
         <label>Ask Rate:</label>
         <span id="askRate">--</span> <br><br>
 
-        <!-- Lot Count -->
         <label for="lot_count">Lot Count:</label>
         <input type="number" name="lot_count" id="lot_count" min="0.1" max="100" step="0.1" required><br><br>
 
-        <!-- Lot Size (неизменяемое значение) -->
         <label>Lot Size:</label>
         <input type="text" value="10" readonly><br><br>
 
-        <!-- Trade Size (автоматический расчет) -->
         <label>Trade Size:</label>
         <span id="tradeSize">--</span><br><br>
 
-        <!-- pipValue -->
         <label>Pip Value:</label>
         <span id="pipValue">--</span><br><br>
 
-        <!-- User Margin -->
         <label>User Margin:</label>
         <span id="userMargin">--</span><br><br>
 
-        <!-- Выбор позиции -->
         <label for="position">Position:</label>
         <select name="position" id="position" required>
             <option value="buy">Buy</option>
             <option value="sell">Sell</option>
         </select><br><br>
 
-
-        <!-- SL / TP -->
-        
-        <!-- Стоп-лосс -->
         <label for="sl">Stop Loss (SL):</label>
         <input type="number" name="sl" id="sl" step="0.0001"><br><br>
 
-        <!-- Тейк-профит -->
         <label for="tp">Take Profit (TP):</label>
         <input type="number" name="tp" id="tp" step="0.0001"><br><br>
 
-        <!-- Submit -->
         <button type="submit">Open Trade</button>
     </form>
 </div>
@@ -86,7 +67,41 @@
 <script>
     document.getElementById('toggleTradeForm').addEventListener('click', () => {
         const form = document.getElementById('tradeFormContainer');
-        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        const button = document.getElementById('toggleTradeForm');
+        
+        if (form.style.display === 'none') {
+            form.style.display = 'block';
+            button.textContent = 'Hide Form';
+        } else {
+            form.style.display = 'none';
+            button.textContent = 'Open New Trade';
+        }
+        });
+
+    document.getElementById('tradeForm').addEventListener('submit', function (e) {
+        e.preventDefault(); 
+
+        const formData = new FormData(this);
+
+        fetch("{{ path('role_open_trade') }}", {
+            method: "POST",
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message || "Trade successfully opened!", 'success');
+            } else {
+                showToast(data.message || "Failed to open trade.", 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast("An error occurred while processing your request.", 'danger');
+        });
     });
 
     let bid = 0;
