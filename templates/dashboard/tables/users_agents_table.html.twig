@@ -2,10 +2,7 @@
 
 <h2 id="manage-users">Manage {{ type  == 'user' ? 'Users' : 'Agents'}}</h2>
 
-{% include 'components/flash_messages.html.twig' with {
-    'error': type ~ 's_tb_error',
-    'success': type ~ 's_tb_success'
-} %}
+<script src="{{ asset('js/toast.js') }}"></script>
 
 {% if records is not empty %}
 
@@ -35,7 +32,7 @@
         <tbody>
             {% for record in records %}
                 {% if type != 'agent' or record.id != current_user_id %}
-                    <tr>
+                    <tr data-user-id="{{ record.id }}">
                         <td>{{ record.id }}</td>
                         <td>{{ record.username }}</td>
                         <td>{{ record.role }}</td>
@@ -48,7 +45,7 @@
                             {% endif %}
                         </td>
                         <td>
-                            <form method="POST" action="{{ path('role_assign_agent', {'userId': record.id, 'tableName': tableName}) }}" onsubmit="return validateForm(this)">
+                            <form class="assign-agent-form" action="{{ path('role_assign_agent') }}">
                                 <select name="agent_id" class="form-control">
                                     {% for agent in agents %}
                                         {% if type != 'agent' or agent.id != record.id %}
@@ -59,8 +56,9 @@
                                     {% endfor %}
                                 </select>
                                 <input type="hidden" name="user_id" value="{{ record.id }}">
+                                <input type="hidden" name="tableName" value="{{ tableName }}">
                                 <button type="submit">Assign</button>
-                            </form>
+                            </form>                         
                         </td>
                     </tr>
                 {% endif %}
@@ -70,3 +68,42 @@
 {% else %}
     <p><em>No {{ type }}s found...</em></p>
 {% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.assign-agent-form').forEach(form => {
+
+    if (form.dataset.listenerAttached === 'true') return;
+    form.dataset.listenerAttached = 'true';
+
+    console.log('Listener added to form', form);
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      formData.append('current_page', window.location.href);
+
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+          },
+          body: formData
+        });
+
+        if (!response.ok) throw new Error('Server error: ' + response.status);
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message || 'Assignment failed');
+        const row = form.closest('tr');
+        row.querySelector('td:nth-child(5)').textContent = data.newAgent.id;
+        form.querySelector('select[name="agent_id"]').value = data.newAgent.id;
+
+        showToast(data.message || 'Agent successfully assigned!', 'success');
+      } catch (err) {
+         showToast(err.message, 'danger');
+      }
+    });
+  });
+});
+</script>
