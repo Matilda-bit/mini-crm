@@ -20,11 +20,7 @@
     </table>
 </div>
 
-    {% if not app.session.get('scripts_loaded') %}
-        <script src="/js/trade_socket.js"></script>
-        {% do app.session.set('scripts_loaded', true) %}
-    {% endif %}
-{# <script src="/js/trade_socket.js"></script> #}
+<script src="/js/trade_socket.js"></script>
 <script>
     let dataTable;
 
@@ -81,6 +77,7 @@
     const assetsMap = new Map();
 
     function updateAssetsTable(data) {
+        //here? check if the data exist - it must affect on close trade button?
         if (!dataTable) return;
 
         data.forEach(asset => {

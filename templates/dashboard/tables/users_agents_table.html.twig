@@ -34,7 +34,15 @@
                 {% if type != 'agent' or record.id != current_user_id %}
                     <tr data-user-id="{{ record.id }}">
                         <td>{{ record.id }}</td>
-                        <td>{{ record.username }}</td>
+                        <td>
+                            {% if type == 'user' %}
+                                <a href="{{ path('dashboard_user', { userId: record.id }) }}">
+                                    {{ record.username }}
+                                </a>
+                            {% else %}
+                                {{ record.username }}
+                            {% endif %}
+                        </td>
                         <td>{{ record.role }}</td>
                         <td>{{ record.dateCreated|date('Y-m-d') }}</td>
                         <td>
