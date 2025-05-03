@@ -1,10 +1,15 @@
 {# templates/dashboard/user_info.html.twig #}
 
 <div class="user-info-container">
-    <h1>Welcome, <span class="username">{{ user.username }}</span>!</h1>
-    <h3 class="dashboard-title">
-        This is {{ user.role == 'ADMIN' ? 'Admin' : user.role == 'REP' ? 'Agent' : 'profile' }} dashboard!
-    </h3>
+    {% if isView %}
+        <h1>This is Page Profile for - <span class="username">{{ user.username }}</span>!</h1>
+    {% else %}
+        <h1>Welcome, <span class="username">{{ user.username }}</span>!</h1>
+        <h3 class="dashboard-title">
+            This is {{ user.role == 'ADMIN' ? 'Admin' : user.role == 'REP' ? 'Agent' : 'profile' }} dashboard!
+        </h3>
+    {% endif %}
+    
 
     <div class="info-card">
         <div class="info-row">
@@ -40,10 +45,12 @@
                 <span class="info-value">{{ user.currency }}</span>
             </div>
         
-            <div class="info-row">
+           <div class="info-row">
                 <span class="info-label">Total PNL:</span>
-                <span class="info-value {{ user.totalPnl < 0 ? 'negative' : 'positive' }}">{{ user.totalPnl }}</span>
+                <span id="totalPnlDisplay" class="info-value {{ user.totalPnl < 0 ? 'negative' : 'positive' }}">
+                </span>
             </div>
+
             <div class="info-row">
                 <span class="info-label">Equity:</span>
                 <span class="info-value">{{ user.equity }}</span>
@@ -51,6 +58,16 @@
         {% endif %}
     </div>
 </div>
+
+<script>
+    window.userTotalPnl = {{ user.totalPnl|default(0)|json_encode|raw }};
+    window.userCurrency = "{{ user.currency|e('js') }}";
+</script>
+
+{% if app.request.requestUri starts with '/dashboard/user' %}
+    <script src="/js/user_pnl.js"></script>
+{% endif %}
+
 
 <style>
     .user-info-container {
