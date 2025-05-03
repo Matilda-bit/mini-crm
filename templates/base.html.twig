@@ -39,6 +39,29 @@
             .logout-button:hover {
                 background-color: #c82333;
             }
+            .return-container {
+                display: flex;
+                justify-content: flex-start;
+                margin-top: 30px;
+                padding-left: 10px; /* добавлено для отступа от левого края */
+            }
+
+            .return-button {
+                display: inline-block;
+                background-color: #007bff;
+                color: #fff;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 5px;
+                text-decoration: none;
+                font-size: 16px;
+                transition: background-color 0.3s ease;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            }
+
+            .return-button:hover {
+                background-color: #0056b3;
+            }
 
             #content {
                 max-width: 1000px;
@@ -52,11 +75,20 @@
     {% endblock %}
 </head>
 <body>
+    {% set isView = isView is defined ? isView : false %}
+    {% block hide_btn %}
+        {% if isView %}
+            <div class="return-container">
+                <a href="javascript:history.back()" class="return-button">Return</a>
+            </div>
+        {% else %}
+            <div class="logout-container">
+                <a href="{{ path('app_logout') }}" class="logout-button">Logout</a>
+            </div>
+        {% endif %}
+    {% endblock %}
 
-    <div class="logout-container">
-        <a href="{{ path('app_logout') }}" class="logout-button">Logout</a>
-    </div>
-
+  
     <div id="content">
         {% block content %}{% endblock %}
     </div>
