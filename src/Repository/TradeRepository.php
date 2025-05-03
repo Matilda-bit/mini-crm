@@ -25,6 +25,26 @@ class TradeRepository extends ServiceEntityRepository
         parent::__construct($registry, Trade::class);
     }
 
+    public function findByUser(User $user): array
+    {
+        return $this->createQueryBuilder('t')
+            ->where('t.user = :user')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getResult();
+    }
+    
+    public function findOpenTradesByUser(User $user): array
+    {
+        return $this->createQueryBuilder('t')
+            ->where('t.user = :user')
+            ->andWhere('t.status = :status')
+            ->setParameter('user', $user)
+            ->setParameter('status', 'open')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function findByUsers(array $users): array
     {
         return $this->createQueryBuilder('t')

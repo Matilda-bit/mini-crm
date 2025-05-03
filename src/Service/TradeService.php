@@ -24,8 +24,13 @@ class TradeService
         private TradeRepository $tradeRepository,
         private EntityManagerInterface $em,
     ) {}
+
+    public function getTradeById(int $id): ?Trade
+    {
+        return $this->tradeRepository->find($id);
+    }
     
-    public function handleTrade( Request $request, UserInterface $user)
+    public function handleTrade( Request $request, UserInterface $user): ?Trade
     {
 
         $referer = $request->headers->get('referer');
@@ -42,7 +47,7 @@ class TradeService
         $asset = $this->assetService->getAssetByName($assetName);
 
         if (!$this->validateTradeRequest($targetUser, $asset, $errorTitle)) {
-            return false;
+            return null;
         }
         $trade = $this->createTrade($targetUser, $user, $position, $lotCount, $sl ?: null, $tp ?: null, $asset);
 
@@ -57,7 +62,7 @@ class TradeService
         }
 
         $this->session->getFlashBag()->add($successTitle, 'Trade successfully opened');
-        return true;
+        return $trade;
     }
 
     private function validateTradeRequest(?User $targetUser, ?Asset $asset, string $errorTitle): bool
@@ -147,9 +152,15 @@ class TradeService
 
         return false;
     }
+
     public function getAllTradesForUserAndSubordinates(UserInterface $user, array $subordinates): array
     {
         return $this->tradeRepository->getAllForUserAndSubordinates($user, $subordinates);
+    }
+
+    public function getTradesByUser(User $user): array
+    {
+        return $this->tradeRepository->findByUser($user);
     }
 
     private function calculatePipValue(Trade $trade, float $conversionRate): float
