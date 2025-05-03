@@ -108,8 +108,8 @@ class AuthController extends AbstractController
     }
 
     #[Route('/login', name: 'app_login')]
-    public function login(): void {
-    
+    public function login(): Response {
+        return $this->redirectToRoute('app_login_register');
     }
 
     #[Route('/logout', name: 'app_logout')]
