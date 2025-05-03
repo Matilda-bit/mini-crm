@@ -18,7 +18,9 @@
                         </option>
                     {% endif %}
                 {% endfor %}
-            </select><br><br>
+            </select>
+            <span id="userCurrencyDisplay" style="margin-left: 10px; color: gray;"></span>
+            <br><br>
         {% endif %}
 
         <label>Asset:</label>
@@ -49,7 +51,7 @@
 
         <label for="position">Position:</label>
         <select name="position" id="position" required>
-            <option value="buy">Buy</option>
+            <option value="buy"  selected>Buy</option>
             <option value="sell">Sell</option>
         </select><br><br>
 
@@ -64,6 +66,8 @@
 </div>
 
 <script src="/js/trade_socket.js"></script>
+<script type="module" src="/js/trade_live_updates.js"></script>
+
 <script>
     document.getElementById('toggleTradeForm').addEventListener('click', () => {
         const form = document.getElementById('tradeFormContainer');
@@ -78,8 +82,10 @@
         }
         });
 
+    let openTrades = {};
+
     document.getElementById('tradeForm').addEventListener('submit', function (e) {
-        e.preventDefault(); 
+        e.preventDefault();
 
         const formData = new FormData(this);
 
@@ -92,8 +98,34 @@
         })
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
+            if (data.success && data.trade && data.trade.id) {
+                console.log('Response from server:', data);
                 showToast(data.message || "Trade successfully opened!", 'success');
+
+                const trade = data.trade;
+
+                const table = $('#tradesTable').DataTable();
+                const newRow = table.row.add([
+                    trade.id,
+                    `<a href="/dashboard/user/${trade.userId}">${trade.user}</a>`,
+                    trade.agent,
+                    trade.position,
+                    trade.entryRate,
+                    `<span id="closeRate-${trade.id}">---</span>`,
+                    `<span id="status-${trade.id}">${trade.status}</span>`,
+                    `<span id="pnl-${trade.id}">0.00</span>`,
+                    `<button class="closeTradeBtn" data-trade-id="${trade.id}">Close</button>`
+                ]).draw(false).node();
+
+                newRow.id = `trade-${trade.id}`;
+
+                openTrades[trade.id] = {
+                    entryRate: trade.entryRate,
+                    position: trade.position.toLowerCase(),
+                    tradeSize: 10 * parseFloat(trade.lotCount), 
+                    userCurrency: trade.userCurrency || '{{ app.user.currency|upper }}'
+                };
+                this.reset();//clear the form
             } else {
                 showToast(data.message || "Failed to open trade.", 'danger');
             }
@@ -107,8 +139,15 @@
     let bid = 0;
     let ask = 0;
     const lotSize = 10;
-    let userCurrency = 'EUR';
-    const conversionRate = 0.9215; // USD to EUR ONLYYY!!!
+    let userCurrency = 'EUR';//default
+
+    {# const conversionRate = 0.9215; // USD to EUR !!! #}
+
+    const currencyToUSD = {
+        USD: 1,
+        EUR: 1.085,  // Пример: 1 EUR = 1.085 USD
+        //BTC: how to get currency from the data from socket below and update to relevant currency?
+    };
     const marketData = {};
 
     const socket = window.tradeSocket ? window.tradeSocket.socket : null;
@@ -125,6 +164,9 @@
 
             if (data.asset_name) {
                 marketData[data.asset_name] = data;
+                if (data.asset_name === "BTC/USD" && data.bid) {
+                    currencyToUSD["BTC"] = parseFloat(data.bid);
+                }
                 updateRatesFromAsset(); 
             }
         });
@@ -133,7 +175,31 @@
     }
 
     document.getElementById('lot_count').addEventListener('input', calculateValues);
-    document.getElementById('position').addEventListener('change', calculateValues);
+    document.getElementById('position').addEventListener('change', function() {
+        const position = this.value; // buy или sell
+        calculateStopLossTakeProfit(position);
+    });
+
+    function calculateStopLossTakeProfit(position) {
+        let entryRate = position === 'buy' ? ask : bid;
+        let sl, tp;
+
+        if (position === 'buy') {
+            sl = entryRate - 0.02; 
+            tp = entryRate + 0.02; 
+        }
+        else if (position === 'sell') {
+            sl = entryRate + 0.02;
+            tp = entryRate - 0.02; 
+        }
+
+        sl = sl.toFixed(4);
+        tp = tp.toFixed(4);
+
+        document.getElementById('sl').value = sl;
+        document.getElementById('tp').value = tp;
+    }
+
     document.getElementById('asset').addEventListener('change', updateRatesFromAsset);
 
     const userSelect = document.getElementById('target_user');
@@ -142,12 +208,13 @@
         userSelect.addEventListener('change', function() {
             const selectedOption = this.options[this.selectedIndex];
             userCurrency = selectedOption.dataset.currency || 'EUR';
+            document.getElementById('userCurrencyDisplay').textContent = `Currency: ${userCurrency}`;
             calculateValues();
         });
 
-        // Установим валюту при первой загрузке формы
         const initialOption = userSelect.options[userSelect.selectedIndex];
         userCurrency = initialOption.dataset.currency || 'EUR';
+        document.getElementById('userCurrencyDisplay').textContent = `Currency: ${userCurrency}`;
     }
     
     function updateRatesFromAsset() {
@@ -169,12 +236,15 @@
         const lotCount = parseFloat(document.getElementById('lot_count').value);
         if (isNaN(lotCount)) return;
 
-        const tradeSize = lotSize * lotCount;
-        const pipValue = tradeSize * 0.01 * (userCurrency === 'USD' ? 1 : conversionRate);
-        const userMargin = tradeSize * 0.1 * (userCurrency === 'USD' ? 1 : conversionRate) * bid;
+        const tradeSize = lotSize * lotCount; // в USD ? 
+        const pipValueUSD = tradeSize * 0.01;
+        const userMarginUSD = tradeSize * 0.1 * bid;
+        const usdToUserCurrency = 1 / (currencyToUSD[userCurrency.toUpperCase()] || 1);
+        const pipValueUser = pipValueUSD * usdToUserCurrency;
+        const userMarginUser = userMarginUSD * usdToUserCurrency;
 
-        document.getElementById('tradeSize').textContent = `${tradeSize.toFixed(2)} ${userCurrency}`;
-        document.getElementById('pipValue').textContent = `${pipValue.toFixed(2)} ${userCurrency}`;
-        document.getElementById('userMargin').textContent = `${userMargin.toFixed(2)} ${userCurrency}`;
+        document.getElementById('tradeSize').textContent = `${(tradeSize * usdToUserCurrency).toFixed(2)} ${userCurrency}`;
+        document.getElementById('pipValue').textContent = `${pipValueUser.toFixed(2)} ${userCurrency}`;
+        document.getElementById('userMargin').textContent = `${userMarginUser.toFixed(2)} ${userCurrency}`;
     }
 </script>

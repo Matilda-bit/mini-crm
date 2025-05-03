@@ -3,10 +3,7 @@
 {% block content %}
     <h2>Trades</h2>
 
-    {% include 'components/flash_messages.html.twig' with {
-        'error': 'close_trade_error',
-        'success': 'close_trade_success'
-    } %}
+    
 
     <table id="tradesTable" class="display">
         <thead>
@@ -19,21 +16,25 @@
                 <th>Close</th>
                 <th>Status</th>
                 <th>PNL</th>
-                {% if role != 'USER' %}
+                {% if role != 'USER' or isView %}
                     <th>Actions</th>
                 {% endif %}
             </tr>
         </thead>
         <tbody>
             {% for trade in trades %}
-                <tr>
+                <tr id="trade-{{ trade.id }}">
                     <td>{{ trade.id }}</td>
-                    <td>{{ trade.user.username }}</td>
+                    <td>
+                        <a href="{{ path('dashboard_user', { userId: trade.user.id }) }}">
+                            {{ trade.user.username }}
+                        </a>
+                    </td>
                     <td>{{ trade.agentId.username }}</td>
                     <td>{{ trade.position }}</td>
                     <td>{{ trade.entryRate }}</td>
-                    <td>{{ trade.closeRate ?: '---' }}</td>
-                    <td>{{ trade.status }}</td>
+                    <td id="closeRate-{{ trade.id }}">{{ trade.closeRate ?: '---' }}</td>
+                    <td id="status-{{ trade.id }}">{{ trade.status }}</td>
                     <td id="pnl-{{ trade.id }}" >
                         {% if trade.status == 'open' %}
                             0.00
@@ -41,12 +42,10 @@
                             {{ trade.pnl }}
                         {% endif %}
                     </td>
-                    {% if role != 'USER' %}
+                    {% if role != 'USER' or isView %}
                         <td>
                             {% if trade.status == 'open' %}
-                                <form method="POST" action="{{ path('role_close_trade', {'tradeId': trade.id}) }}">
-                                    <button type="submit">Close</button>
-                                </form>
+                                <button class="closeTradeBtn" data-trade-id="{{ trade.id }}">Close</button>
                             {% else %}
                                 ---
                             {% endif %}
@@ -57,3 +56,5 @@
         </tbody>
     </table>
 {% endblock %}
+
+<script src="{{ asset('js/toast.js') }}"></script>
